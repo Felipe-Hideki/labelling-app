@@ -1,5 +1,3 @@
-from typing import overload
-
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import QLine, QPoint, QSize
 from PyQt5.QtGui import QCursor
@@ -47,14 +45,12 @@ class CanvasHelper:
         """
         
         move_by = mouse_pos - clicked_shape.top_left()
-        for shape, _ in shapes_formation:
-            shape.move_by(move_by, _max)
-        # clicked_shape.move_by(move_by, _min, _max)
+        clicked_shape.move_by(move_by, _max)
 
-        # for shape, offset in shapes_formation:
-        #     if shape == clicked_shape:
-        #         continue
-        #     shape.move(clicked_shape.min() - offset, _min, _max)
+        for shape, offset in shapes_formation:
+            if shape == clicked_shape:
+                continue
+            shape.move(clicked_shape.top_left() - offset, _max)
 
     @staticmethod
     def get_crosshair(mouse_pos: Vector2Int, win_width: int, win_height: int) -> tuple[QLine, QLine]:
