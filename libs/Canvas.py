@@ -384,13 +384,14 @@ class Canvas(QWidget):
         # MOVE VERTEX
         closest_shape, vertex_index = helper.get_closest_shape_vertex(mousePos, self.shapes)
         if closest_shape is not None:
+            self.deselect_all()
             self.select(closest_shape, True)
             #Start moving vertex
 
             self.state = MOVING_VERTEX
             closest_shape.highlighted_vertex = vertex_index
 
-            helper.move_vertex(mousePos, self.selected_shapes)
+            self.selected_shapes[0].move_vertex(mousePos)
 
             self.update()
             return
