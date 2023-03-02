@@ -1,0 +1,8 @@
+venv/
+.*
+__pycache__
+*.prof
+*.png
+*.json
+!default*.json
+!.gitignore
