@@ -13,7 +13,8 @@ class setScale(QWidget):
             try:
                 self.canvas.set_scale(float(self.input.text()))
                 self.input.setText('')
-            except:
+            except Exception as e:
+                print(e)
                 return
         self.input.editingFinished.connect(on_edit_end)
 

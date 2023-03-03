@@ -1,7 +1,7 @@
 from PyQt5.QtCore import QPointF, QPoint, QSize, QRect
 
 from dataclasses import dataclass
-from math import sqrt
+from math import sqrt, ceil
 from typing import overload, Union
 
 from libs.Utils import Utils as utils
@@ -91,7 +91,7 @@ class Vector2Int:
             raise TypeError(__class__)
     
     def __mul__(self, num: int | float) -> 'Vector2Int':
-        return Vector2Int(int(self.x * num), int(self.y * num))
+        return Vector2Int(ceil(self.x * num), ceil(self.y * num))
 
     def __truediv__(self, val: int | float) -> 'Vector2Int':
         return Vector2Int(int(self.x / val), int(self.y / val))

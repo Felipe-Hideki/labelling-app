@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import QLine, QPoint, QSize
+from PyQt5.QtCore import QLine, QPoint, QSize, QRect
 from PyQt5.QtGui import QCursor
 
 from libs.Shape import Shape
@@ -16,6 +16,17 @@ class CanvasHelper:
 
     def __new__(cls: type['CanvasHelper']) -> 'CanvasHelper':
         raise InvalidInstantiation("Tried to instantiate 'CanvasHelper' class, a data only class.")
+
+    @staticmethod
+    def get_rect(min: Vector2Int, max: Vector2Int) -> QRect:
+        """
+        Returns a QRect from a minimum and maximum position.
+
+        Args:
+            min (Vector2Int): The minimum position.
+            max (Vector2Int): The maximum position.
+        """
+        return QRect(min.x, min.y, max.x - min.x, max.y - min.y)
 
     @staticmethod
     def get_formation(center: Shape, shapes: list[Shape]) -> list[(Shape, Vector2Int)]:
@@ -84,7 +95,7 @@ class CanvasHelper:
         return QPoint(int(size.width() / 2), int(size.height() / 2))
 
     @staticmethod
-    def get_mouse(scale: float = 1, relative: QWidget = None) -> Vector2Int:
+    def get_mouse(scale: float = 1, relative: QWidget = None, offset: Vector2Int = Vector2Int.one()) -> Vector2Int:
         """
         Returns the position of the mouse on the canvas, scaled and relative to the 'relative' widget.
 
@@ -98,7 +109,7 @@ class CanvasHelper:
 
         mousepos = Vector2Int(rawpos)
         mousepos.scale(scale)
-        return mousepos
+        return mousepos - offset
     
     @staticmethod
     def relative_pos(pos: Vector2Int | QPoint, center: Vector2Int | QPoint) -> Vector2Int:

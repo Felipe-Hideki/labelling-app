@@ -50,7 +50,8 @@ class keyHandler:
             self.__binds: dict[str, bind] = {
             "create-shape": bind('w', KEY_DOWN, False),
             "delete-shape": bind('delete', KEY_DOWN, False),
-            "multi-select": bind('control', KEY_DOWN, True)
+            "multi-select": bind('control', KEY_DOWN, True),
+            "move": bind('space', KEY_DOWN, True)
             }
             self.save()
             return
@@ -64,14 +65,7 @@ class keyHandler:
         self.__binds: dict[str, bind] = {}
 
         for key, val in binds.items():
-            print(val)
             self.__binds[key] = bind(val['key'], val['state_type'], val['toggle'])
-
-        self.__binds: dict[str, bind] = {
-            "create-shape": bind('w', KEY_DOWN, False),
-            "delete-shape": bind('delete', KEY_DOWN, False),
-            "multi-select": bind('control', KEY_DOWN, True)
-        }
 
         keyboard.hook(self.__hook)
 

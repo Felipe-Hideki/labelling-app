@@ -1,0 +1,22 @@
+{
+    "create-shape": {
+        "key": "w",
+        "state_type": 0,
+        "toggle": false
+    },
+    "delete-shape": {
+        "key": "delete",
+        "state_type": 0,
+        "toggle": false
+    },
+    "multi-select": {
+        "key": "control",
+        "state_type": 0,
+        "toggle": true
+    },
+    "move": {
+        "key": "space",
+        "state_type": 0,
+        "toggle": true
+    }
+}

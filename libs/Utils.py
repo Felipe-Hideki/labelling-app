@@ -1,8 +1,9 @@
 from typing import overload
-from libs.MyException import InvalidInstantiation
 
 from PyQt5.QtWidgets import QMainWindow, QApplication
 from PyQt5.QtCore import Qt
+
+from libs.MyException import InvalidInstantiation
 
 class Utils:
     def __new__(cls: type['Utils']) -> 'Utils':

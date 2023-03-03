@@ -13,6 +13,9 @@ class MousePos(QWidget):
 
         self.relativePos = QLabel(self)
         self.relativePos.resize(200, 20)
+
+        self.viewport = QLabel(self)
+        self.viewport.resize(200, 20)
         self.on_timer_ends()
 
         self.timer = QTimer(self)
@@ -22,6 +25,7 @@ class MousePos(QWidget):
         vl = QVBoxLayout()
         vl.addWidget(self.mousePos)
         vl.addWidget(self.relativePos)
+        vl.addWidget(self.viewport)
 
         self.setLayout(vl)     
 
@@ -36,3 +40,4 @@ class MousePos(QWidget):
 
         self.mousePos.setText(f"Mouse position: {cursor.x()}, {cursor.y()}")
         self.relativePos.setText(f"Mouse relative position: {relative_pos.x}, {relative_pos.y}")
+        self.viewport.setText(f"Viewport: {Canvas.instance().viewport_offset.x}, {Canvas.instance().viewport_offset.y}")

@@ -1,19 +1,18 @@
 from typing import overload
+from math import ceil
 
 from PyQt5.QtCore import Qt, QSize, QPointF, QPoint
 from PyQt5.QtWidgets import QWidget, QSizePolicy
-from PyQt5.QtGui import QColor, QPalette, QPainter, QPaintEvent, QMouseEvent, QPixmap, QImage, QPen
+from PyQt5.QtGui import QColor, QPalette, QPainter, QPaintEvent, QMouseEvent, QPixmap, QImage, QPen, QResizeEvent
 
 from libs.ShapePoints import ShapePoints
 from libs.Shape import Shape
 from libs.Vector import Vector2Int
 from libs.CanvasHelper import CanvasHelper as helper
 from libs.keyHandler import keyHandler
+from libs.CanvasScrollArea import CanvasScrollManager as CanvasScroll
 
-CREATE = 0
-EDIT = 1
-MOVING_SHAPE = 2
-MOVING_VERTEX = 3
+CREATE, EDIT, MOVE, MOVING_SHAPE, MOVING_VERTEX = range(5)
 
 class Canvas(QWidget):
     """
@@ -38,12 +37,18 @@ class Canvas(QWidget):
         self.setFocusPolicy(Qt.WheelFocus)
 
         if 'parent' in kwargs:
-            self.setParent(kwargs['parent'])
+            self.mainWindow = kwargs['parent']
+
+        self.scroll_manager = CanvasScroll(self)
+        self.scroll_manager.scroll_changed.connect(self.on_scroll_change)
 
         pal = QPalette()
         pal.setColor(QPalette.Window, Qt.black)
         self.setAutoFillBackground(True)
         self.setPalette(pal)
+
+        self.left_pressed = False
+        self.move_sensibility = .7
 
         self.shapes: list[Shape] = []
         self._painter = QPainter()
@@ -54,6 +59,7 @@ class Canvas(QWidget):
         self.selected_shapes: list[Shape] = []
 
         self.scale = 1.00
+        self.viewport_offset = Vector2Int(0, 0)
 
         self.creating_pos = None # origin of the new shape
         self.mouse_offset = Vector2Int(0, 0)
@@ -69,12 +75,12 @@ class Canvas(QWidget):
         kh.bind_to("create-shape", self.create_mode)
         kh.bind_to("delete-shape", self.delete)
         kh.bind_to("multi-select", self.multi_select_mode)
+        kh.bind_to("move", self.move_mode)
 
         self.pixmap = QPixmap()
         self.pixmap.convertFromImage(QImage.fromData(open("./Screenshot_1.png", "rb").read()))
 
         Canvas._instance = self
-
     @classmethod
     def instance(cls):
         '''
@@ -84,69 +90,53 @@ class Canvas(QWidget):
             cls._instance = cls()
         return cls._instance
 
+    def resizeEvent(self, a0: QResizeEvent) -> None:
+        self.scroll_manager.update()
+
     def paintEvent(self, a0: QPaintEvent) -> None:
-        '''
-            Paints the canvas and all the shapes on it.
-            
-            Args:
-                a0: The QPaintEvent
-        '''
+        pixmap_max = QPoint(self.pixmap.width(), self.pixmap.height()) / 2
+        _min = -Vector2Int(self.rect().center() - pixmap_max)
+        _max = Vector2Int(self.rect().center() - pixmap_max) * self.scale
+
+        viewport = self.size() / self.scale
+
+        self.viewport_offset.clip(_min, _max)
+
         origin = self.get_origin().as_qpoint()
 
         p = self._painter
         p.begin(self)
         p.scale(self.scale, self.scale)
 
-        # Translate the painter to the top left of the pixmap
-        p.translate(origin)
+        p.setPen(QPen(Qt.white, 7))
 
-        p.drawPixmap(QPoint(0, 0), self.pixmap)
+        p.drawPixmap(origin, self.pixmap)
+        p.drawPoint(self.get_mouse(True).as_qpoint() + origin)
 
-        for shape in self.shapes:
-            if shape.isVisible:
-                shape.paint(p)
-
-        p.setPen(QPen(Qt.white, 5))
-        p.drawPoint((self.get_mouse(True)).as_qpoint())
-
-        # Draw the new shape if the state is CREATE and the mouse button has been pressed
-        if self.state == CREATE and self.creating_pos:
-            p.setPen(Canvas.NEW_SHAPE_DEFAULT_COLOR)
-            p.setBrush(Canvas.NEW_SHAPE_DEFAULT_COLOR)
-
-            mouse_pos = self.get_mouse(True)
-            self.clip_to_pixmap(mouse_pos)
-
-            sp = ShapePoints.square(self.creating_pos, mouse_pos)
-            min, max = Vector2Int.get_min_max(sp.points)
-
-            width = max.x - min.x
-            height = max.y - min.y
-
-            p.drawRect(min.x,  min.y, width, height)
-        # Draw the crosshair if the state is CREATE and the mouse button has not been pressed
-        elif self.state == CREATE:
-            p.translate(-origin)
-            p.setPen(Canvas.EDIT_AXIS_DEFAULT_COLOR)
-            p.setBrush(Canvas.EDIT_AXIS_DEFAULT_COLOR)
-
-            size = self.sizeHint()
-            mouse_pos = self.get_mouse()
-
-            hor_line, ver_line = helper.get_crosshair(mouse_pos, size.width(), size.height())
-
-            # Spawn 2 lines one horizontal and one vertical that intersects at mouse position
-            p.drawLine(hor_line)
-            p.drawLine(ver_line)
-            p.translate(origin)
         p.end()
+
+    def on_scroll_change(self, orientation: Qt.Orientation, value: int) -> None:
+        '''
+            Called when the scroll value of the canvas is changed.
+
+            Args:
+                orientation: The orientation of the scroll bar
+                value: The new value of the scroll bar
+        '''
+        if orientation == Qt.Horizontal:
+            self.viewport_offset.x = value
+        else:
+            self.viewport_offset.y = value
+        
+        print(self.viewport_offset)
+        self.update()    
 
     def get_origin(self) -> Vector2Int:
         '''
             Returns the top left of the pixmap as Vector2Int
         '''
-        pixmap_max = QPoint(self.pixmap.width(), self.pixmap.height())
-        return Vector2Int(self.rect().center() - pixmap_max / 2)
+        pixmap_max = QPoint(self.pixmap.width(), self.pixmap.height()) / 2
+        return (Vector2Int(self.rect().center() - pixmap_max) - self.viewport_offset)
 
     def unfill_all_shapes(self) -> None:
         '''
@@ -171,6 +161,7 @@ class Canvas(QWidget):
                 val: The new scale of the canvas
         '''
         self.scale = val
+        self.scroll_manager.on_scale(val, Vector2Int(self.pixmap.size()))
         self.update()
 
     def unhighlight_vertexes(self) -> None:
@@ -192,6 +183,13 @@ class Canvas(QWidget):
         '''
         m_pos = self.get_mouse(True)
         return (m_pos.x < 0 or m_pos.y < 0) or (m_pos.x > self.pixmap.width() or m_pos.y > self.pixmap.height())
+
+    def move_mode(self) -> None:
+        '''
+            Sets the canvas to move mode.
+        '''
+        self.state = MOVE if self.state != MOVE else EDIT
+        self.update()
 
     def create_mode(self) -> None:
         '''
@@ -299,7 +297,7 @@ class Canvas(QWidget):
         if shape is not None:
             shape.fill = True
             self.update()
-            self.last_mouse_pos = mousePos
+            self.last_mouse_pos = self.get_mouse(True)
             return True
         return False
 
@@ -320,6 +318,16 @@ class Canvas(QWidget):
     def mouseMoveEvent(self, a0: QMouseEvent) -> None:
         mousePos = self.get_mouse(True)
         self.clip_to_pixmap(mousePos)
+
+
+        # IF MOVING
+        if self.state == MOVE and self.left_pressed:
+            delta = self.get_mouse(True) - self.last_mouse_pos
+            print(delta)
+            self.viewport_offset += (self.get_mouse(True) - self.last_mouse_pos) * -1
+            self.update()
+            self.last_mouse_pos = self.get_mouse(True)
+            return
 
         # IF MOVING VERTEX
         if self.state == MOVING_VERTEX:
@@ -344,7 +352,7 @@ class Canvas(QWidget):
         if self.state == CREATE:
             self.h_shapes = []
             self.update()
-            self.last_mouse_pos = mousePos
+            self.last_mouse_pos = self.get_mouse(True)
             return
 
         # HIGHLIGHT VERTEX
@@ -366,7 +374,7 @@ class Canvas(QWidget):
         # ELSE
         self.h_shapes = []
         self.update()
-        self.last_mouse_pos = mousePos
+        self.last_mouse_pos = self.get_mouse(True)
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
         mousePos = self.get_mouse(True)
@@ -374,6 +382,8 @@ class Canvas(QWidget):
 
         if a0.button() != Qt.LeftButton:
             return
+        
+        self.left_pressed = True
 
         # IF CREATE
         if self.state == CREATE:
@@ -418,6 +428,8 @@ class Canvas(QWidget):
     def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
         if a0.button() != Qt.LeftButton:
             return
+        
+        self.left_pressed = False
 
         if self.state == CREATE:
             self.create()

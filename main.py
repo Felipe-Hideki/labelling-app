@@ -14,8 +14,18 @@ from libs.mousePos import MousePos
 __appname__ = "labelImg"
         
 class MainWindow(QMainWindow):
+    __instance = None
+
+    @classmethod
+    def instance(cls):
+        if not cls.__instance:
+            cls.__instance = cls()
+        return cls.__instance
+
     def __init__(self) -> None:
         super().__init__()
+        MainWindow.__instance = self
+
         self.setWindowTitle(__appname__)
 
         self.keyHandler = keyHandler(self) if keyHandler.instance() is None else keyHandler.instance()
