@@ -10,30 +10,15 @@ class Utils:
         raise InvalidInstantiation("Tried to instantiate 'Utils' class, a data only class.")
 
     @staticmethod
-    def type_equals(val: object, **types: type ) -> bool:
-        return val in types
+    @overload
+    def is_type(value, type: type = ...) -> bool: ...
+    @staticmethod
+    def is_type(*args):
+        if type(args[0]) in args[1:]:
+            return True
+        return False
 
     @staticmethod
-    def extract_vals(args: tuple, kwargs: dict, keys: list[str], match_types: list[type] = [], rlen = 1) -> list | None:
-        '''
-        Extract wanted value from args and kwargs if it has, else None
-        Usage: extract_vals(args, kwargs, [KeyI])
-        '''
-        index = 0
-        matched = []
-        if len(args) < rlen:
-            for key in keys:
-                if key in kwargs and (len(match_types) == 0 or match_types[index] == type(kwargs[key])):
-                    matched.append(kwargs[key])
-                    continue
-                return None
-            return matched if len(matched) > 0 else None
-        for i in range(rlen):
-            if len(match_types) == 0 or type(args[i]) == match_types[index]:
-                matched.append(args[i])
-                index += 1
-        return matched if len(matched) == len(match_types) else None
-
     def modifiers_to_string(modifiers: Qt.KeyboardModifiers) -> str | None:
         mod_string = ''
         if modifiers & Qt.ShiftModifier:

@@ -13,6 +13,7 @@ class CanvasHelper:
     MIN_DIST_HIGHLIGHT = 8.00
     MIN_DIST_CREATE = 10.00
     MIN_DIST_TO_MOVE = 1.3
+    MAX_ZOOM = 5.00
 
     def __new__(cls: type['CanvasHelper']) -> 'CanvasHelper':
         raise InvalidInstantiation("Tried to instantiate 'CanvasHelper' class, a data only class.")
@@ -93,23 +94,6 @@ class CanvasHelper:
             size (QSize): The size to get the middle point of.
         """
         return QPoint(int(size.width() / 2), int(size.height() / 2))
-
-    @staticmethod
-    def get_mouse(scale: float = 1, relative: QWidget = None, offset: Vector2Int = Vector2Int.one()) -> Vector2Int:
-        """
-        Returns the position of the mouse on the canvas, scaled and relative to the 'relative' widget.
-
-        Args:
-            scale (float, optional): The scale of the canvas. Defaults to 1.
-            relative (QWidget, optional): The widget to get the mouse position relative to. Defaults to None. Returns the global position if None.
-        """
-        rawpos = QCursor.pos()
-        if relative:
-            rawpos = relative.mapFromGlobal(QCursor.pos())
-
-        mousepos = Vector2Int(rawpos)
-        mousepos.scale(scale)
-        return mousepos - offset
     
     @staticmethod
     def relative_pos(pos: Vector2Int | QPoint, center: Vector2Int | QPoint) -> Vector2Int:

@@ -48,7 +48,7 @@ class keyHandler:
 
         if not os.path.exists(self.__keybinds_path) and not os.path.exists(self.__default_keybinds_path):
             self.__binds: dict[str, bind] = {
-            "create-shape": bind('w', KEY_DOWN, False),
+            "create-shape": bind('w', KEY_DOWN, True),
             "delete-shape": bind('delete', KEY_DOWN, False),
             "multi-select": bind('control', KEY_DOWN, True),
             "move": bind('space', KEY_DOWN, True)
@@ -98,6 +98,7 @@ class keyHandler:
             return
         for bind_details in self.__binds.values():
             if (bind_details.state_type == KEY_UP or bind_details.toggle) and bind_details.scancode == event.scan_code:
+                print(bind_details.funcs)
                 self.__broadcast(bind_details.funcs)
             if bind_details.state and bind_details.scancode == event.scan_code:
                 bind_details.state = False

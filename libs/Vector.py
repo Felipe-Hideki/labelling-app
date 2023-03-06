@@ -14,7 +14,7 @@ class Vector2Int:
     def __init__(self, qsize: QSize) -> None: ...
 
     @overload
-    def __init__(self, x: int, y: int) -> None: ...
+    def __init__(self, x: int | float, y: int | float) -> None: ...
 
     @overload
     def __init__(self, vec2: 'Vector2Int') -> None: ...
@@ -22,43 +22,26 @@ class Vector2Int:
     @overload
     def __init__(self, qpoint: QPoint) -> None: ...
 
-    def __init__(self, *args, **kwargs) -> None:
-        size = utils.extract_vals(args, kwargs, ['qsize'], [QSize])
+    def __init__(self, *args) -> None:
+        args_size = len(args)
+        if args_size == 0:
+            self.x = 0
+            self.y = 0
+        elif args_size == 2:
+            assert utils.is_type(args[0], int, float) and utils.is_type(args[0], int, float), \
+                "Vector2Int.__init__(): args[0] and args[1] must be int or float"
+            self.x = args[0]
+            self.y = args[1]
+        elif args_size == 1 and type(args[0]) == QSize:
+            self.__from_QSize(args[0])
+        elif args_size == 1 and type(args[0]) == QPoint:
+            self.__from_QPoint(args[0])
+        elif args_size == 1 and type(args[0]) == Vector2Int:
+            self.__from_Vec2(args[0])
+        else:
+            raise TypeError(__class__)
 
-        if size:
-            self.__from_QSize(size[0])
-            return
-
-        vec2 = utils.extract_vals(args, kwargs, ['vec2'], [Vector2Int])
-        
-        if vec2:
-            self.__from_Vec2(vec2[0])
-            return
-
-        qpoint = utils.extract_vals(args, kwargs, ['qpoint'], [QPoint])
-
-        if qpoint:
-            self.__from_QPointF(qpoint[0])
-            return
-
-        properties = utils.extract_vals(args, kwargs, ['x', 'y'], [int, int], 2)
-
-        if properties:
-            self.x = int(properties[0])
-            self.y = int(properties[1])
-            return
-        
-        properties = utils.extract_vals(args, kwargs, ['x', 'y'], [float, float], 2)
-
-        if properties:
-            self.x = int(properties[0])
-            self.y = int(properties[1])
-            return
-
-        self.x = 0
-        self.y = 0
-
-    def __from_QPointF(self, qpointf: QPointF | QPoint) -> None:
+    def __from_QPoint(self, qpointf: QPointF | QPoint) -> None:
         self.x = int(qpointf.x())
         self.y = int(qpointf.y())
 
@@ -80,6 +63,9 @@ class Vector2Int:
         else:
             raise TypeError(__class__)
 
+    def __radd__(self, coord: Union[QPoint, 'Vector2Int', QSize]) -> 'Vector2Int':
+        return self.__add__(coord)
+
     def __sub__(self, coord: Union[QPoint, 'Vector2Int', QSize]) -> 'Vector2Int':
         if type(coord) == QPoint:
             return Vector2Int(self.x - coord.x(), self.y - coord.y())
@@ -90,11 +76,27 @@ class Vector2Int:
         else:
             raise TypeError(__class__)
     
+    def __rsub__(self, coord: Union[QPoint, 'Vector2Int', QSize]) -> 'Vector2Int':
+        if type(coord) == QPoint:
+            return Vector2Int(coord.x() - self.x, coord.y() - self.y)
+        elif type(coord) == Vector2Int:
+            return Vector2Int(coord.x - self.x, coord.y - self.y)
+        elif type(coord) == QSize:
+            return Vector2Int(coord.width() - self.x, coord.height() - self.y)
+        else:
+            raise TypeError(__class__)
+
     def __mul__(self, num: int | float) -> 'Vector2Int':
         return Vector2Int(ceil(self.x * num), ceil(self.y * num))
 
+    def __rmul__(self, num: int | float) -> 'Vector2Int':
+        return self.__mul__(num)
+
     def __truediv__(self, val: int | float) -> 'Vector2Int':
         return Vector2Int(int(self.x / val), int(self.y / val))
+
+    def __floordiv__(self, val: int | float) -> 'Vector2Int':
+        return Vector2Int(self.x // val, self.y // val)
 
     def __neg__(self) -> 'Vector2Int':
         return Vector2Int(-self.x, -self.y)
@@ -145,19 +147,32 @@ class Vector2Int:
         return f"Vector2Int({self.x}, {self.y})"
 
     @staticmethod
+    @overload
+    def get_min_max(points: list[QPoint]) -> tuple[QPoint, QPoint]: ...
+
+    @staticmethod
     def get_min_max(points: list['Vector2Int']) -> tuple['Vector2Int', 'Vector2Int']:
-        max = Vector2Int(vec2=points[0])
-        min = Vector2Int(vec2=points[0])
-        for p in points:
-            if p.y > max.y:
-                max.y = p.y
-            if p.x > max.x:
-                max.x = p.x
-            if p.y < min.y:
-                min.y = p.y
-            if p.x < min.x:
-                min.x = p.x
-        return min, max
+        assert len(points) > 0, "Cannot get min/max of empty list"
+        assert type(points[0]) == Vector2Int or type(points[0]) == QPoint, "Cannot get min/max of list of non-Vector2Ints or QPoints"
+
+        if type(points[0]) == QPoint:
+            _min_x = min([p.x() for p in points])
+            _min_y = min([p.y() for p in points])
+            _max_x = max([p.x() for p in points])
+            _max_y = max([p.y() for p in points])
+
+            _min = QPoint(_min_x, _min_y)
+            _max = QPoint(_max_x, _max_y)
+            
+        else:
+            _min_x = min([p.x for p in points])
+            _min_y = min([p.y for p in points])
+            _max_x = max([p.x for p in points])
+            _max_y = max([p.y for p in points])
+
+            _min = Vector2Int(_min_x, _min_y)
+            _max = Vector2Int(_max_x, _max_y)
+        return _min, _max
 
     @staticmethod
     def one() -> 'Vector2Int':
@@ -165,6 +180,30 @@ class Vector2Int:
             Returns a Vector2(1, 1)
         '''
         return Vector2Int(1, 1)
+    @staticmethod
+    def right() -> 'Vector2Int':
+        '''
+            Returns a Vector2(1, 0)
+        '''
+        return Vector2Int(1, 0)
+    @staticmethod
+    def left() -> 'Vector2Int':
+        '''
+            Returns a Vector2(-1, 0)
+        '''
+        return Vector2Int(-1, 0)
+    @staticmethod
+    def up() -> 'Vector2Int':
+        '''
+            Returns a Vector2(0, -1)
+        '''
+        return Vector2Int(0, -1)
+    @staticmethod
+    def down() -> 'Vector2Int':
+        '''
+            Returns a Vector2(0, 1)
+        '''
+        return Vector2Int(0, 1)
 
     @staticmethod
     def distance(p1: 'Vector2Int', p2: 'Vector2Int') -> float:

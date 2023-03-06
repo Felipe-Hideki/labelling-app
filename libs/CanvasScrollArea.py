@@ -60,7 +60,6 @@ class CanvasScrollManager(QObject):
 
         scaled_canvas: QSize = Vector2Int(self.canvas.size()).scaled(scale)
         _range = pixmap_size - scaled_canvas
-        print(f"{_range=}")
 
         if _range.x > 0:
             self.hor_scroll.setRange(0, _range.x)

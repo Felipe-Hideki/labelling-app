@@ -1,4 +1,5 @@
 from sys import argv
+from cProfile import Profile
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -10,6 +11,7 @@ from libs.mainWidget import mainWidget
 from libs.MenuBar import MenuBar
 from libs.keyHandler import keyHandler
 from libs.mousePos import MousePos
+from libs.CoordinatesLog import CoordinatesLog
 
 __appname__ = "labelImg"
         
@@ -27,14 +29,14 @@ class MainWindow(QMainWindow):
         MainWindow.__instance = self
 
         self.setWindowTitle(__appname__)
-
         self.keyHandler = keyHandler(self) if keyHandler.instance() is None else keyHandler.instance()
-
+        
         self.setMenuBar(MenuBar.instance())
         
         self.win1 = QWidget(self)
-
         self.canvas = Canvas(parent=self)
+
+        self.canvas.add_shape(Shape("aeiou", ShapePoints.square(Vector2Int(50, 50), 50)))
 
         self.mainWidget = mainWidget(parent=self)
         self.mainWidget.set_left(self.canvas)
@@ -42,6 +44,7 @@ class MainWindow(QMainWindow):
 
         self.set_scale = setScale(self.canvas)
         self.mouseTracker = MousePos()
+        self.viewportLogger = CoordinatesLog()
 
         self.mainWidget.move(0, self.menuBar().sizeHint().height())
 
@@ -49,6 +52,7 @@ class MainWindow(QMainWindow):
         self.win1.v_layout.setAlignment(Qt.AlignTop)
         self.win1.v_layout.addWidget(self.set_scale)
         self.win1.v_layout.addWidget(self.mouseTracker)
+        self.win1.v_layout.addWidget(self.viewportLogger)
         self.win1.setLayout(self.win1.v_layout)
 
         self.resize(800, 600)
@@ -72,8 +76,13 @@ class MainWindow(QMainWindow):
             print(e)
 
 if __name__ == "__main__":
+    profiler = Profile()
+    profiler.enable()
     app = QApplication(argv)
     app.setApplicationName = __appname__
 
     win = MainWindow()
-    app.exec()
+    exitcode = app.exec()
+    profiler.dump_stats("./stats")
+    profiler.disable()
+    exit(exitcode)

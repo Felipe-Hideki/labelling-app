@@ -1,22 +1,11 @@
-from enum import IntEnum
-
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 from libs.ShapePoints import ShapePoints
 from libs.Vector import Vector2Int
 from libs.MyException import ShapeNoPointsException, InvalidVertexException
+from libs.CoordinatesSystem import Position, TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT
 
-class Position(IntEnum):
-    TOP_LEFT = 0
-    TOP_RIGHT = 1
-    BOTTOM_RIGHT = 2
-    BOTTOM_LEFT = 3
-
-TOP_LEFT = 0
-TOP_RIGHT = 1
-BOTTOM_RIGHT = 2
-BOTTOM_LEFT = 3
     
 class Shape:
     DEFAULT_LINE_COLOR = QColor(255, 255, 255, 255)
@@ -29,8 +18,11 @@ class Shape:
 
     VERTEX_SIZE = 3
     VERTEX_HIGHLIGHT_GROWTH = 2
+
+    PEN_SIZE = 1
     
     def __init__(self, name: str, points: ShapePoints) -> None:
+        assert points is not None, "Shape.__init__(): points must not be None"
         self.name = name
         self.__points = points
         self.isVisible = True
@@ -46,44 +38,46 @@ class Shape:
         self.fill_pattern = Shape.DEFAULT_FILL_PATTERN
         self.fill_pattern_color = Shape.DEFAULT_FILL_PATTERN_COLOR
 
-        if points is None:
-            self.__points = ShapePoints([])
-
-    def get_middle(self) -> Vector2Int:
-        return self.top_left() + self.size() / 2
+        _min, _max = Vector2Int.get_min_max(self.__points)
+        self.__size = QSize(_max.x - _min.x, _max.y - _min.y)
+        self.__pos = Vector2Int(self.__size / 2 + _min)
+        self.__scale = 1.0
+        self.__scaled = [point.as_qpoint() for point in self.__points]
 
     def top_left(self) -> Vector2Int:
         return Vector2Int.get_min_max(self.__points)[0]
     
     def bot_right(self) -> Vector2Int:
         return Vector2Int.get_min_max(self.__points)[1]
-    
+
     def width(self) -> int:
-        min, max = Vector2Int.get_min_max(self.__points)
-        return max.x - min.x
+        return self.__size.width()
     
     def height(self) -> int:
-        min, max = Vector2Int.get_min_max(self.__points)
-        return max.y - min.y
+        return self.__size.height()
     
-    def size(self) -> Vector2Int:
-        min, max = Vector2Int.get_min_max(self.__points)
-        width = max.x - min.x
-        height = max.y - min.y
+    def size(self) -> QSize:
+        return self.__size
 
-        return Vector2Int(width, height)
+    def __update_size(self) -> None:
+        _min, _max = Vector2Int.get_min_max(self.__points)
+
+        self.__size = QSize(_max.x - _min.x, _max.y - _min.y)
+    
+    def __update_pos(self) -> None:
+        self.__pos = Vector2Int(self.__size / 2 + self.top_left())
+
+    def __update_scale(self, scale: float):
+        self.__scale = scale
+        self.__scaled = self.__scale_points(scale)
 
     def closest_vertex(self, pos: Vector2Int, limit: float) -> tuple[int, float] | tuple[None, None]:
-        index = 0
-        while index < len(self.__points):
-            dist = Vector2Int.distance(self.__points[index], pos)
-            if dist <= limit:
-                return index, dist
-            index += 1
-        return None, None
-    
-    def has_points(self) -> bool:
-        return len(self.__points) > 0
+        closest = (None, None)
+        for i, point in enumerate(self.__points):
+            if (dist := Vector2Int.distance(pos, point)) < limit:
+                if closest[0] is None or dist < closest[1]:
+                    closest = (i, dist)
+        return closest
 
     def move_by(self, amount: Vector2Int, clip_max: Vector2Int) -> None:
         self.move(self.top_left() + amount, clip_max)
@@ -111,6 +105,9 @@ class Shape:
         self.__points[TOP_RIGHT] = Vector2Int(move_to.x + shape_size.x, move_to.y)
         self.__points[BOTTOM_RIGHT] = move_to + shape_size
         self.__points[BOTTOM_LEFT] = Vector2Int(move_to.x, move_to.y + shape_size.y)
+
+        self.__update_size()
+        self.__update_pos()
 
     def unfill(self) -> None:
         self.fill = False
@@ -141,9 +138,9 @@ class Shape:
                 raise(InvalidVertexException(f"Tried to move vertex with index: {int(index)}"))
 
     def is_within(self, pos: Vector2Int) -> bool:
-        min, max = Vector2Int.get_min_max(self.__points)
-        
-        if (pos.x > min.x and pos.x < max.x) and (pos.y > min.y and pos.y < max.y):
+        _min, _max = Vector2Int.get_min_max(self.__points)
+
+        if (pos.x > _min.x and pos.x < _max.x) and (pos.y > _min.y and pos.y < _max.y):
             return True
         else:
             return False
@@ -153,75 +150,80 @@ class Shape:
             return None
         return self.highlighted_vertex
 
-    def _draw_lines(self, painter: QPainter):
-        if not self.has_points():
-            raise ShapeNoPointsException()
+    def __get_pen(self, scale: float, color: QColor, extra: int = 0) -> QPen:
+        return QPen(color, int(Shape.PEN_SIZE + extra * scale))
 
-        painter.setBrush(QColor(0, 0, 0, 0))
-        painter.setPen(self.lines_color)
+    def __scale_points(self, scale: float) -> list[QPoint]:
+        scaled = [None] * 4
+        scaled[TOP_LEFT] = (self.__pos - self.__size / 2) * scale
+        scaled[TOP_RIGHT] = (self.__pos + Vector2Int(self.__size.width(), -self.__size.height())  / 2) * scale
+        scaled[BOTTOM_RIGHT] = (self.__pos + Vector2Int(self.__size.width(), -self.__size.height()) / 2) * scale
+        scaled[BOTTOM_LEFT] = (self.__pos - self.__size / 2) * scale
+        return [point.as_qpoint() for point in scaled]
 
-        if self.fill:
-            painter.setBrush(QBrush(self.fill_pattern_color, self.fill_pattern))
+    def __draw_square(self, painter: QPainter, scale: float):
 
-        if self.get_highlighted_vertex() is not None and not self.selected:
-            painter.setPen(self.highlighted_color)
-        
         if self.selected:
             painter.setBrush(QBrush(self.selected_color, self.fill_pattern))
+        elif self.fill:
+            painter.setBrush(QBrush(self.fill_pattern_color, self.fill_pattern))
+        else:
+            painter.setBrush(QColor(0, 0, 0, 0))
 
-        points = self.__points.to_QPointF()
-        line_path = QPainterPath(points[0])
+        if self.get_highlighted_vertex() is not None and not self.selected:
+            painter.setPen(self.__get_pen(scale, self.highlighted_color))
+        else:
+            painter.setPen(self.__get_pen(scale, self.lines_color))
+        
 
-        index = 1
-        while index < len(points):
-            line_path.lineTo(points[index])
-            index += 1
-        line_path.lineTo(points[0])
+        # Get the points and draw the shape
+        points = self.__scaled
+        _min, _max = Vector2Int.get_min_max(points)
+        draw_rect = QRect(_min, _max)
 
-        painter.drawPath(line_path)
+        painter.fillRect(draw_rect, painter.brush().color())
+        painter.drawRect(draw_rect)
 
-    def _draw_vertex(self, painter: QPainter):
-        if not self.has_points():
-            raise ShapeNoPointsException()
+        # line_path = QPainterPath(points[0])
+
+        # index = 1
+        # for point in points[1:]:
+        #     line_path.lineTo(point)
+        # line_path.lineTo(points[0])
+
+        # painter.fillRect(line_path.boundingRect(), painter.brush().color())
+        # painter.drawPath(line_path)
+
+        self.__draw_vertex(painter, scale, points)
+
+    def __draw_vertex(self, painter: QPainter, scale: float, points: list[QPoint]):
+        # if self.fill or self.selected:
+        #     self.__fill(painter, scale, points)
+
+        # Get the highlighted vertex and points
         h_vertex = self.get_highlighted_vertex()
-        points = self.__points.to_QPointF()
-        painter.setPen(self.vertex_color)
+        # Set the pen and brush
+        painter.setPen(self.__get_pen(scale, self.vertex_color, self.VERTEX_SIZE))
         painter.setBrush(self.vertex_color)
 
         index = 0
         while index < len(points):
             p = points[index]
             if h_vertex is not None and h_vertex == index:
-                painter.setPen(self.highlighted_color)
+                # if the vertex is highlighted, draw a bigger circle around it with the highlighted color
+                painter.setPen(self.__get_pen(scale, self.highlighted_color, self.VERTEX_SIZE + self.VERTEX_HIGHLIGHT_GROWTH))
                 painter.setBrush(self.highlighted_color)
-                painter.drawEllipse(p, Shape.VERTEX_SIZE + Shape.VERTEX_HIGHLIGHT_GROWTH, Shape.VERTEX_SIZE + Shape.VERTEX_HIGHLIGHT_GROWTH)
+                painter.drawPoint(p)
                 painter.setBrush(self.vertex_color)
-                painter.setPen(self.vertex_color)
+                painter.setPen(self.__get_pen(scale, self.vertex_color, self.VERTEX_SIZE))
                 index += 1
                 continue
-            painter.drawEllipse(p, Shape.VERTEX_SIZE, Shape.VERTEX_SIZE)
+            painter.drawPoint(p)
             index += 1
 
-    def _fill(self, painter: QPainter):
-        if not self.has_points():
-            raise ShapeNoPointsException()
-
-        painter.setPen(self.fill_color)
-        painter.setBrush(QBrush(self.fill_color))
-
-        if self.selected:
-            painter.setPen(self.lines_color)
-            painter.setBrush(QBrush(self.selected_color))
-
-        min, max = Vector2Int.get_min_max(self.__points)
-
-        painter.drawRect(min.x, min.y, self.width(), self.height())
-
-    def paint(self, painter: QPainter):
-        if not self.has_points():
-            raise ShapeNoPointsException()
+    def paint(self, painter: QPainter, scale: float):
         
-        self._draw_lines(painter)
-        if self.fill or self.selected:
-            self._fill(painter)
-        self._draw_vertex(painter)  
+        if scale != self.__scale:
+            self.__update_scale(scale)
+
+        self.__draw_square(painter, scale)

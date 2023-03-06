@@ -2,7 +2,7 @@
     "create-shape": {
         "key": "w",
         "state_type": 0,
-        "toggle": false
+        "toggle": true
     },
     "delete-shape": {
         "key": "delete",
