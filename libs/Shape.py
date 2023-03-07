@@ -62,7 +62,7 @@ class Shape:
         return self.__size
 
     def __update_size(self) -> None:
-        self.__top_left, self.__bot_right = Vector2Int.get_min_max(self.__min_max)
+        self.__top_left, self.__bot_right = Vector2Int.get_min_max(self.__points)
         self.__size = QSize(self.__bot_right.x - self.__top_left.x, self.__bot_right.y - self.__top_left.y)
     
     def __update_pos(self) -> None:
@@ -84,11 +84,14 @@ class Shape:
         self.move(self.top_left() + amount, clip_max)
 
     def move(self, to: Vector2Int, clip_max: Vector2Int) -> None:
+        assert type(to) == Vector2Int, "Args[0] Need to be Vector2Int"
+        assert type(clip_max) == Vector2Int, "Args[1] Need to be Vector2Int"
+        
         # Get the size of the shape
         shape_size = self.size()
 
         # Adjust the clipping area to account for the size of the shape
-        clip_max = Vector2Int(clip_max.x - shape_size.x, clip_max.y - shape_size.y)
+        clip_max = Vector2Int(clip_max.x - shape_size.width(), clip_max.y - shape_size.height())
 
         # Initialize the point the shape will move to
         move_to = Vector2Int(to)
@@ -103,9 +106,9 @@ class Shape:
 
         # Update the position of the shape's points
         self.__points[TOP_LEFT] = move_to
-        self.__points[TOP_RIGHT] = Vector2Int(move_to.x + shape_size.x, move_to.y)
+        self.__points[TOP_RIGHT] = Vector2Int(move_to.x + shape_size.width(), move_to.y)
         self.__points[BOTTOM_RIGHT] = move_to + shape_size
-        self.__points[BOTTOM_LEFT] = Vector2Int(move_to.x, move_to.y + shape_size.y)
+        self.__points[BOTTOM_LEFT] = Vector2Int(move_to.x, move_to.y + shape_size.width())
 
         self.__update_size()
         self.__update_pos()
@@ -159,7 +162,7 @@ class Shape:
         scaled[TOP_LEFT] = (self.__pos - self.__size / 2) * scale
         scaled[TOP_RIGHT] = (self.__pos + Vector2Int(self.__size.width(), -self.__size.height())  / 2) * scale
         scaled[BOTTOM_RIGHT] = (self.__pos + self.__size / 2) * scale
-        scaled[BOTTOM_LEFT] = (self.__pos - self.__size / 2) * scale
+        scaled[BOTTOM_LEFT] = (self.__pos + Vector2Int(-self.__size.width(), self.__size.height()) / 2) * scale
         return [point.as_qpoint() for point in scaled]
 
     def __draw_square(self, painter: QPainter, scale: float):

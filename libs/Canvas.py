@@ -66,7 +66,7 @@ class Canvas(QWidget):
         self.setPalette(pal) 
 
         self.left_pressed = False # if the left mouse button is pressed
-        self.move_sensibility = .7 # the multiplier of the mouse movement to move the viewport
+        self.move_sensitivity = .5 # the multiplier of the mouse movement to move the viewport
 
         self.shapes: list[Shape] = [] # list of shapes
         self._painter = QPainter() # painter to draw canvas
@@ -390,14 +390,14 @@ class Canvas(QWidget):
         self.set_scale(a0.angleDelta().y() / 120 * .1 + self.scale)
 
     def mouseMoveEvent(self, a0: QMouseEvent) -> None:
-        mousePos = self.get_mouse()
+        mousePos = (self.get_mouse() - self.pixmap_rel_pos()) / self.scale
 
         # IF MOVING
         if self.state == MOVE and self.left_pressed:
-            delta = mousePos - self.last_mouse_pos
-            self.viewport.move_by(-delta)
+            delta = self.get_mouse() - self.last_mouse_pos
+            self.viewport.move_by(-delta * self.scale * self.move_sensitivity)
             self.update()
-            self.last_mouse_pos = mousePos
+            self.last_mouse_pos = self.get_mouse()
             return
 
         # IF MOVING VERTEX
@@ -417,13 +417,12 @@ class Canvas(QWidget):
             self.update()
             return
 
-        self.mouse_moved += Vector2Int.distance(mousePos, self.last_mouse_pos)
+        self.mouse_moved += Vector2Int.distance(mousePos, (self.last_mouse_pos- self.pixmap_rel_pos()) / self.scale)
 
         # IF CREATING
         if self.state == CREATE:
             self.h_shapes = []
             self.update()
-            self.last_mouse_pos = mousePos
             return
 
         # HIGHLIGHT VERTEX
@@ -439,16 +438,15 @@ class Canvas(QWidget):
         self.unfill_all_shapes()
 
         # HIGHLIGHT SHAPE
-        if self.auto_fill_shape(closest_vertex[0]):
+        if self.auto_fill_shape(closest_shape):
             return
 
         # ELSE
         self.h_shapes = []
         self.update()
-        self.last_mouse_pos = mousePos
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
-        mousePos = self.get_mouse()
+        mousePos = (self.get_mouse() - self.pixmap_rel_pos()) / self.scale
 
         if a0.button() != Qt.LeftButton:
             return
@@ -457,6 +455,7 @@ class Canvas(QWidget):
 
         # IF MOVING
         if self.state == MOVE:
+            self.last_mouse_pos = self.get_mouse()
             return
 
         # IF CREATE
