@@ -43,16 +43,16 @@ class MainWindow(QMainWindow):
         self.mainWidget.set_right(self.win1)
 
         self.set_scale = setScale(self.canvas)
-        self.mouseTracker = MousePos()
-        self.viewportLogger = CoordinatesLog()
+        #self.mouseTracker = MousePos()
+        #self.viewportLogger = CoordinatesLog()
 
         self.mainWidget.move(0, self.menuBar().sizeHint().height())
 
         self.win1.v_layout = QVBoxLayout()
         self.win1.v_layout.setAlignment(Qt.AlignTop)
         self.win1.v_layout.addWidget(self.set_scale)
-        self.win1.v_layout.addWidget(self.mouseTracker)
-        self.win1.v_layout.addWidget(self.viewportLogger)
+        #self.win1.v_layout.addWidget(self.mouseTracker)
+        #self.win1.v_layout.addWidget(self.viewportLogger)
         self.win1.setLayout(self.win1.v_layout)
 
         self.resize(800, 600)

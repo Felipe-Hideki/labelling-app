@@ -43,12 +43,14 @@ class Shape:
         self.__pos = Vector2Int(self.__size / 2 + _min)
         self.__scale = 1.0
         self.__scaled = [point.as_qpoint() for point in self.__points]
+        self.__top_left = points[TOP_LEFT]
+        self.__bot_right = points[BOTTOM_RIGHT]
 
     def top_left(self) -> Vector2Int:
-        return Vector2Int.get_min_max(self.__points)[0]
+        return self.__top_left
     
     def bot_right(self) -> Vector2Int:
-        return Vector2Int.get_min_max(self.__points)[1]
+        return self.__bot_right
 
     def width(self) -> int:
         return self.__size.width()
@@ -60,9 +62,8 @@ class Shape:
         return self.__size
 
     def __update_size(self) -> None:
-        _min, _max = Vector2Int.get_min_max(self.__points)
-
-        self.__size = QSize(_max.x - _min.x, _max.y - _min.y)
+        self.__top_left, self.__bot_right = Vector2Int.get_min_max(self.__min_max)
+        self.__size = QSize(self.__bot_right.x - self.__top_left.x, self.__bot_right.y - self.__top_left.y)
     
     def __update_pos(self) -> None:
         self.__pos = Vector2Int(self.__size / 2 + self.top_left())
@@ -157,7 +158,7 @@ class Shape:
         scaled = [None] * 4
         scaled[TOP_LEFT] = (self.__pos - self.__size / 2) * scale
         scaled[TOP_RIGHT] = (self.__pos + Vector2Int(self.__size.width(), -self.__size.height())  / 2) * scale
-        scaled[BOTTOM_RIGHT] = (self.__pos + Vector2Int(self.__size.width(), -self.__size.height()) / 2) * scale
+        scaled[BOTTOM_RIGHT] = (self.__pos + self.__size / 2) * scale
         scaled[BOTTOM_LEFT] = (self.__pos - self.__size / 2) * scale
         return [point.as_qpoint() for point in scaled]
 

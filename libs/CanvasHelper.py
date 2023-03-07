@@ -124,6 +124,29 @@ class CanvasHelper:
         return QPoint(-point.x(), -point.y())
 
     @staticmethod
+    def get_within(pos: Vector2Int, shapes: list[Shape]) -> tuple[Shape, tuple[Shape, int]]:
+        found = False
+        selected_shape = None
+
+        min_dist = CanvasHelper.MIN_DIST_HIGHLIGHT+1
+        closest = (None, None)
+
+        for shape in shapes:
+            within = shape.is_within(pos)
+            if within and not shape.selected and not found:
+                found = True
+                selected_shape = shape
+            if within and shape.selected and not found:
+                selected_shape = shape
+            index, dist = shape.closest_vertex(pos, min_dist)
+            if index is not None and dist < min_dist:
+                min_dist = dist
+                closest = (shape, index)
+
+        return selected_shape, closest
+
+
+    @staticmethod
     def get_shape_within(pos: Vector2Int, shapes: list[Shape]) -> Shape | None:
         """
         Returns the shape that contains the point 'pos', or None if no shape contains the point.

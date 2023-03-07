@@ -17,7 +17,7 @@ class MousePos(QWidget):
 
         self.framerateTimer = QTimer(self)
         self.framerateTimer.timeout.connect(self.update_frame)
-        self.framerateTimer.start(1)
+        self.framerateTimer.start(int(1000/60))
         self.start_time = time.monotonic()
         self.num_frames = 0
 
