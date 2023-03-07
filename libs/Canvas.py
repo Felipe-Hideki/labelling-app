@@ -125,6 +125,8 @@ class Canvas(QWidget):
         p.drawPixmap(self.rect_to_draw, self.resized_pixmap)
         
         p.translate(self.rect_to_draw.topLeft())
+        p.setPen(QPen(Qt.white, 5))
+        p.drawPoint((self.get_mouse() - self.pixmap_rel_pos()).as_qpoint())
         for shape in self.shapes:
             shape.paint(p, self.scale)
         p.translate(-self.rect_to_draw.topLeft())
@@ -172,7 +174,7 @@ class Canvas(QWidget):
         painter.setBrush(QBrush(self.NEW_SHAPE_DEFAULT_COLOR))
 
         mouse_pos = self.get_mouse()
-        start_pos = Vector2Int(self.creating_pos.as_qpoint())
+        start_pos = self.creating_pos
 
         self.clip_to_pixmap(mouse_pos, self.rect_to_draw.topLeft())
         self.clip_to_pixmap(start_pos, self.rect_to_draw.topLeft())
@@ -282,13 +284,15 @@ class Canvas(QWidget):
 
         #print(f"{type(mousepos)=}")
 
-        _min = self.viewport.pos() + self.creating_pos - self.rect_to_draw.topLeft()
-        _max = self.viewport.pos() + mousepos - self.rect_to_draw.topLeft()
+        relative_pos = self.pixmap_rel_pos()
+
+        _min = self.creating_pos - relative_pos
+        _max = mousepos - relative_pos
 
         self.clip_to_pixmap(_min)
         self.clip_to_pixmap(_max)
 
-        shapepos = ShapePoints.square(_min, _max)
+        shapepos = ShapePoints.square(_min / self.scale, _max / self.scale)
         shape = Shape("", shapepos)
 
         print(f"Created shape with min: {shape.top_left()} and max: {shape.bot_right()}")
@@ -448,8 +452,6 @@ class Canvas(QWidget):
 
         if a0.button() != Qt.LeftButton:
             return
-        
-        self.state = CREATE
         
         self.left_pressed = True
 
