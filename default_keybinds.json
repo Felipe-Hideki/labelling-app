@@ -1,22 +1,32 @@
 {
-    "create-shape": {
-        "key": "w",
-        "state_type": 0,
-        "toggle": true
-    },
-    "delete-shape": {
-        "key": "delete",
-        "state_type": 0,
+    "next_image": {
+        "key": "d",
+        "state_type": "KEY_DOWN",
         "toggle": false
     },
-    "multi-select": {
+    "prev_image": {
+        "key": "a",
+        "state_type": "KEY_DOWN",
+        "toggle": false
+    },
+    "create_shape": {
+        "key": "w",
+        "state_type": "KEY_DOWN",
+        "toggle": true
+    },
+    "delete_shape": {
+        "key": "delete",
+        "state_type": "KEY_DOWN",
+        "toggle": false
+    },
+    "multi_select": {
         "key": "control",
-        "state_type": 0,
+        "state_type": "KEY_DOWN",
         "toggle": true
     },
     "move": {
         "key": "space",
-        "state_type": 0,
+        "state_type": "KEY_DOWN",
         "toggle": true
     }
 }

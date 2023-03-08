@@ -111,7 +111,7 @@ class Transform(QObject):
     def bot_left(self) -> Vector2Int:
         return self.__relative_pos + Vector2Int(-self.__size.x, self.__size.y) / 2
 
-    def get_size(self) -> Vector2Int:
+    def size(self) -> Vector2Int:
         '''
         Get the size of the transform
         '''
@@ -180,7 +180,7 @@ class Transform(QObject):
         # then move the object to the position
 
         # Fictional point at the point `to` + half of the size of the object
-        transform_border = to + self.get_size()/2
+        transform_border = to + self.size()/2
         global_border = self.__global.size()/2
 
         if transform_border.x > global_border.x and not bigger_axis_flag[0]:
@@ -188,7 +188,7 @@ class Transform(QObject):
         if transform_border.y > global_border.y and not bigger_axis_flag[1]:
             to.y -= transform_border.y - global_border.y
 
-        transform_border = to - self.get_size()/2
+        transform_border = to - self.size()/2
 
         if transform_border.x < -global_border.x and not bigger_axis_flag[0]:
             to.x += abs(transform_border.x + global_border.x)

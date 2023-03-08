@@ -62,13 +62,13 @@ class MousePos(QWidget):
             self.key_pressed.setText("Key pressed: W")
 
     def update_frame(self):
-        if not Canvas.instance().hasFocus():
-            return
         self.num_frames += 1
 
     def get_frame_rate(self):
-        if self.num_frames == 0:
-            return 0
+        if self.num_frames % 60*5 == 0:
+            self.start_time = time.monotonic()
+            self.num_frames = 1
+            return 1
         elapsed_time = time.monotonic() - self.start_time
         frame_rate = self.num_frames / elapsed_time
         return frame_rate

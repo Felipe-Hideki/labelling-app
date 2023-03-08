@@ -1,14 +1,30 @@
 import keyboard
 import json
 import os.path
+from enum import Enum
 
 from PyQt5.QtWidgets import QMainWindow
 
-KEY_DOWN = 0
-KEY_UP = 1
+class keyStates(Enum):
+    KEY_DOWN = 0
+    KEY_UP = 1
+
+    def __str__(self) -> str:
+        return self.name
+
+class ActionBind(Enum):
+    next_image = 0
+    prev_image = 1
+    create_shape = 2
+    delete_shape = 3
+    multi_select = 4
+    move = 5
+
+    def __str__(self) -> str:
+        return self.name
 
 class bind:
-    def __init__(self, key: str, state_type: int, toggle: bool, funcs: list[any] = [], state: bool = False):
+    def __init__(self, key: str, state_type: keyStates, toggle: bool, funcs: list[any] = [], state: bool = False):
         self.key = key
         self.scancode = keyboard.key_to_scan_codes(key)[0]
         self.state_type = state_type
@@ -48,10 +64,12 @@ class keyHandler:
 
         if not os.path.exists(self.__keybinds_path) and not os.path.exists(self.__default_keybinds_path):
             self.__binds: dict[str, bind] = {
-            "create-shape": bind('w', KEY_DOWN, True),
-            "delete-shape": bind('delete', KEY_DOWN, False),
-            "multi-select": bind('control', KEY_DOWN, True),
-            "move": bind('space', KEY_DOWN, True)
+            ActionBind.next_image: bind('d', keyStates.KEY_DOWN, False),
+            ActionBind.prev_image: bind('a', keyStates.KEY_DOWN, False),
+            ActionBind.create_shape: bind('w', keyStates.KEY_DOWN, True),
+            ActionBind.delete_shape: bind('delete', keyStates.KEY_DOWN, False),
+            ActionBind.multi_select: bind('control', keyStates.KEY_DOWN, True),
+            ActionBind.move: bind('space', keyStates.KEY_DOWN, True)
             }
             self.save()
             return
@@ -65,7 +83,7 @@ class keyHandler:
         self.__binds: dict[str, bind] = {}
 
         for key, val in binds.items():
-            self.__binds[key] = bind(val['key'], val['state_type'], val['toggle'])
+            self.__binds[ActionBind[key]] = bind(val['key'], keyStates[val['state_type']], val['toggle'])
 
         keyboard.hook(self.__hook)
 
@@ -85,7 +103,7 @@ class keyHandler:
             return
 
         for bind_details in self.__binds.values():
-            if bind_details.state_type == KEY_DOWN \
+            if bind_details.state_type == keyStates.KEY_DOWN \
                     and not bind_details.state and bind_details.scancode == event.scan_code:
                 self.__broadcast(bind_details.funcs)
                 bind_details.state = True
@@ -97,8 +115,7 @@ class keyHandler:
                     bind_details.state = False
             return
         for bind_details in self.__binds.values():
-            if (bind_details.state_type == KEY_UP or bind_details.toggle) and bind_details.scancode == event.scan_code:
-                print(bind_details.funcs)
+            if (bind_details.state_type == keyStates.KEY_UP or bind_details.toggle) and bind_details.scancode == event.scan_code:
                 self.__broadcast(bind_details.funcs)
             if bind_details.state and bind_details.scancode == event.scan_code:
                 bind_details.state = False
@@ -159,9 +176,9 @@ class keyHandler:
     def save(self):
         data: dict[str, dict[str, bind]] = {}
         for key, val in self.__binds.items():
-            data[key] = {
+            data[str(key)] = {
                 "key": val.key,
-                "state_type": val.state_type,
+                "state_type": str(val.state_type),
                 "toggle": val.toggle
             }
 

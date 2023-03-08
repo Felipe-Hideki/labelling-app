@@ -68,7 +68,7 @@ class CoordinatesLog(QWidget):
     def on_timer_ends(self):
         try:
             canvas = Canvas.instance()
-            viewport_size = canvas.viewport.get_size()
+            viewport_size = canvas.viewport.size()
             pixmap_at =  -canvas.viewport.pos()
             pixmap_size = canvas.original_pixmap.size() * canvas.scale
 

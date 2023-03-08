@@ -2,7 +2,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 from libs.ShapePoints import ShapePoints
-from libs.Vector import Vector2Int
+from libs.Vector import Vector2Int, Vector2
 from libs.MyException import ShapeNoPointsException, InvalidVertexException
 from libs.CoordinatesSystem import Position, TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT
 
@@ -40,17 +40,15 @@ class Shape:
 
         _min, _max = Vector2Int.get_min_max(self.__points)
         self.__size = QSize(_max.x - _min.x, _max.y - _min.y)
-        self.__pos = Vector2Int(self.__size / 2 + _min)
+        self.__pos = Vector2(Vector2(self.__size) / 2 + _min)
         self.__scale = 1.0
         self.__scaled = [point.as_qpoint() for point in self.__points]
-        self.__top_left = points[TOP_LEFT]
-        self.__bot_right = points[BOTTOM_RIGHT]
 
     def top_left(self) -> Vector2Int:
-        return self.__top_left
+        return self.__points[TOP_LEFT]
     
     def bot_right(self) -> Vector2Int:
-        return self.__bot_right
+        return self.__points[BOTTOM_RIGHT]
 
     def width(self) -> int:
         return self.__size.width()
@@ -60,13 +58,17 @@ class Shape:
     
     def size(self) -> QSize:
         return self.__size
+    
+    def __update(self) -> None:
+        self.__update_size()
+        self.__update_pos()
+        self.__update_scale(self.__scale)
 
     def __update_size(self) -> None:
-        self.__top_left, self.__bot_right = Vector2Int.get_min_max(self.__points)
-        self.__size = QSize(self.__bot_right.x - self.__top_left.x, self.__bot_right.y - self.__top_left.y)
+        self.__size = QSize(self.bot_right().x - self.top_left().x, self.bot_right().y - self.top_left().y)
     
     def __update_pos(self) -> None:
-        self.__pos = Vector2Int(self.__size / 2 + self.top_left())
+        self.__pos = Vector2(Vector2(self.__size) / 2 + self.top_left())
 
     def __update_scale(self, scale: float):
         self.__scale = scale
@@ -86,7 +88,7 @@ class Shape:
     def move(self, to: Vector2Int, clip_max: Vector2Int) -> None:
         assert type(to) == Vector2Int, "Args[0] Need to be Vector2Int"
         assert type(clip_max) == Vector2Int, "Args[1] Need to be Vector2Int"
-        
+
         # Get the size of the shape
         shape_size = self.size()
 
@@ -110,16 +112,13 @@ class Shape:
         self.__points[BOTTOM_RIGHT] = move_to + shape_size
         self.__points[BOTTOM_LEFT] = Vector2Int(move_to.x, move_to.y + shape_size.width())
 
-        self.__update_size()
-        self.__update_pos()
+        self.__update()
 
     def unfill(self) -> None:
         self.fill = False
 
-    def move_vertex(self, to: Vector2Int = None, index: Position | int = None) -> None:
-        index = self.get_highlighted_vertex() if index is None else index
-        to = self.__points[index] if to is None else to
-        assert index is not None
+    def move_vertex(self, to: Vector2Int, index: Position | int) -> None:
+        assert to is not None and index is not None, "Shape.move_vertex(): to and index must not be None"
 
         match(index):
             case Position.TOP_LEFT:
@@ -140,6 +139,10 @@ class Shape:
                 self.__points[BOTTOM_RIGHT] = Vector2Int(self.__points[BOTTOM_RIGHT].x, to.y)
             case _:
                 raise(InvalidVertexException(f"Tried to move vertex with index: {int(index)}"))
+            
+        print(self.__points)
+
+        self.__update()
 
     def is_within(self, pos: Vector2Int) -> bool:
         _min, _max = Vector2Int.get_min_max(self.__points)
@@ -158,11 +161,21 @@ class Shape:
         return QPen(color, int(Shape.PEN_SIZE + extra * scale))
 
     def __scale_points(self, scale: float) -> list[QPoint]:
+        size = Vector2(self.__size)
+        _min, _max = Vector2Int.get_min_max(self.__points)
+        _min = Vector2(_min)
+        _max = Vector2(_max)
         scaled = [None] * 4
-        scaled[TOP_LEFT] = (self.__pos - self.__size / 2) * scale
-        scaled[TOP_RIGHT] = (self.__pos + Vector2Int(self.__size.width(), -self.__size.height())  / 2) * scale
-        scaled[BOTTOM_RIGHT] = (self.__pos + self.__size / 2) * scale
-        scaled[BOTTOM_LEFT] = (self.__pos + Vector2Int(-self.__size.width(), self.__size.height()) / 2) * scale
+        scaled[TOP_LEFT] = round(_min * self.__scale)
+        scaled[TOP_RIGHT] = round(Vector2(_max.x, _min.y) * self.__scale)
+        scaled[BOTTOM_RIGHT] = round(_max * self.__scale)
+        scaled[BOTTOM_LEFT] = round(Vector2(_min.x, _max.y) * self.__scale)
+
+        # scaled[TOP_LEFT] = round((self.__pos - size / 2) * scale)
+        # scaled[TOP_RIGHT] = round((self.__pos + Vector2Int(size.x, -size.y)  / 2) * scale)
+        # scaled[BOTTOM_RIGHT] = round((self.__pos + size / 2) * scale)
+        # scaled[BOTTOM_LEFT] = round((self.__pos + Vector2Int(-size.x, size.y) / 2) * scale)
+
         return [point.as_qpoint() for point in scaled]
 
     def __draw_square(self, painter: QPainter, scale: float):
@@ -207,7 +220,7 @@ class Shape:
         # Get the highlighted vertex and points
         h_vertex = self.get_highlighted_vertex()
         # Set the pen and brush
-        painter.setPen(self.__get_pen(scale, self.vertex_color, self.VERTEX_SIZE))
+        painter.setPen(self.__get_pen(scale, self.vertex_color))
         painter.setBrush(self.vertex_color)
 
         index = 0
@@ -215,14 +228,16 @@ class Shape:
             p = points[index]
             if h_vertex is not None and h_vertex == index:
                 # if the vertex is highlighted, draw a bigger circle around it with the highlighted color
-                painter.setPen(self.__get_pen(scale, self.highlighted_color, self.VERTEX_SIZE + self.VERTEX_HIGHLIGHT_GROWTH))
+                painter.setPen(self.__get_pen(scale, self.highlighted_color))
                 painter.setBrush(self.highlighted_color)
-                painter.drawPoint(p)
+                size = int((self.VERTEX_SIZE + self.VERTEX_HIGHLIGHT_GROWTH) * scale)
+                painter.drawEllipse(p.x() - int(size / 2), p.y() - int(size / 2), size, size)
                 painter.setBrush(self.vertex_color)
-                painter.setPen(self.__get_pen(scale, self.vertex_color, self.VERTEX_SIZE))
+                painter.setPen(self.__get_pen(scale, self.vertex_color))
                 index += 1
                 continue
-            painter.drawPoint(p)
+            size = int(self.VERTEX_SIZE * scale)
+            painter.drawEllipse(p.x() - int(size / 2), p.y() - int(size / 2), size, size)
             index += 1
 
     def paint(self, painter: QPainter, scale: float):
@@ -231,3 +246,7 @@ class Shape:
             self.__update_scale(scale)
 
         self.__draw_square(painter, scale)
+        s = self.__scale
+        self.__scale = 1
+        self.__draw_square(painter, scale)
+        self.__scale = s
