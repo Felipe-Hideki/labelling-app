@@ -78,6 +78,7 @@ class Canvas(QWidget):
 
         self.selected_shapes: list[Shape] = [] # selected shapes
         self.highlighted_vertex: tuple[Shape, int] = (None, None)
+        self.filled_shape: Shape = None
 
         self.scale = 1.00 # scale of the canvas
 
@@ -126,6 +127,9 @@ class Canvas(QWidget):
         
         if self.state == CREATE:
             self.draw_new_shape(p)
+
+        p.setPen(QPen(Qt.white, 5))
+        p.drawPoint(self.get_mouse().as_qpoint())
 
         p.end()
 
@@ -207,12 +211,15 @@ class Canvas(QWidget):
 
         self.update()    
 
-    def unfill_all_shapes(self) -> None:
+    def unfill_shape(self) -> None:
         '''
-            Unfills all shapes
+            Unfills the filled shape
         '''
-        for shape in self.shapes:
-            shape.unfill()
+        if self.filled_shape is None:
+            return
+        
+        self.filled_shape.unfill()
+        self.filled_shape = None
 
     def sizeHint(self) -> QSize:
         '''
@@ -379,6 +386,7 @@ class Canvas(QWidget):
             Auto fills a shape if the mouse is within a shape.
         '''
         if shape is not None:
+            self.filled_shape = shape
             shape.fill = True
             self.update()
             self.last_mouse_pos = self.get_mouse()
@@ -410,7 +418,6 @@ class Canvas(QWidget):
 
     def mouseMoveEvent(self, a0: QMouseEvent) -> None:
         if Files_Manager.instance().img_index() == -1:
-            print("returned")
             return
         mousePos = self.get_mouse_relative()
 
@@ -424,7 +431,7 @@ class Canvas(QWidget):
 
         # IF MOVING VERTEX
         if self.state == MOVING_VERTEX:
-            self.unfill_all_shapes()
+            self.unfill_shape()
 
             """ mousePos.x = max(0, min(mousePos.x, self.cs.size().x))
             mousePos.y = max(0, min(mousePos.y, self.cs.size().y)) """
@@ -435,7 +442,7 @@ class Canvas(QWidget):
 
         # IF MOVING SHAPE
         if self.state == MOVING_SHAPE and self.mouse_moved > helper.MIN_DIST_TO_MOVE:
-            self.unfill_all_shapes()
+            self.unfill_shape()
 
             mousePos -= self.mouse_offset
             helper.move_shapes(mousePos, self.clicked_shape, self.shape_formation, Vector2Int(self.original_pixmap.size()))
@@ -453,7 +460,7 @@ class Canvas(QWidget):
         # HIGHLIGHT VERTEX
         closest_shape, closest_vertex = helper.get_within(mousePos, self.shapes)
         if closest_vertex[0] is not None:
-            self.unfill_all_shapes()
+            self.unfill_shape()
             closest_vertex[0].highlighted_vertex = closest_vertex[1]
             self.highlighted_vertex = closest_vertex
             self.update()
@@ -461,12 +468,13 @@ class Canvas(QWidget):
 
         # HIGHLIGHT SHAPE
         if self.auto_fill_shape(closest_shape):
+            self.unhighlight_vertexes()
             return
 
         # ELSE
-        if len(self.h_shapes) > 0 or self.highlighted_vertex[0] is not None:
+        if len(self.h_shapes) > 0 or self.highlighted_vertex[0] is not None or self.filled_shape is not None:
             self.unhighlight_vertexes()
-            self.unfill_all_shapes()
+            self.unfill_shape()
             self.h_shapes = []
             self.update()
 

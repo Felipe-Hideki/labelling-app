@@ -7,12 +7,13 @@ from PyQt5.QtWidgets import *
 from libs.Canvas import Canvas
 from libs.Shape import *
 from libs.setScale import setScale
-from libs.mainWidget import mainWidget
+from libs.MainWindowManager import MainWindowManager
 from libs.MenuBar import MenuBar
 from libs.keyHandler import keyHandler, ActionBind
 from libs.mousePos import MousePos
 from libs.CoordinatesLog import CoordinatesLog
 from libs.Files_Manager import Files_Manager
+from libs.InfoWidget import InfoWidget
 
 __appname__ = "labelImg"
         
@@ -38,15 +39,17 @@ class MainWindow(QMainWindow):
 
         # Setting up files_manager
         self.files_manager.OnLoadDir.connect(self.load)
-        
-        # Windows
-        self.win1 = QWidget(self)
-        self.canvas = Canvas(parent=self)
 
         # Main widget
-        self.mainWidget = mainWidget(parent=self)
+        self.mainWidget = MainWindowManager(parent=self)
+
+        # Windows
+        self.info_widget = InfoWidget(self)
+        self.canvas = Canvas(parent=self)
+
+        # Setting up the main window
         self.mainWidget.set_left(self.canvas)
-        self.mainWidget.set_right(self.win1)
+        self.mainWidget.set_right(self.info_widget)
 
         # Utiliies
         self.set_scale = setScale(self.canvas)
@@ -58,17 +61,16 @@ class MainWindow(QMainWindow):
         self.mainWidget.move(0, self.menuBar().sizeHint().height())
 
         # Setting up the right window
-        self.win1.v_layout = QVBoxLayout()
-        self.win1.v_layout.setAlignment(Qt.AlignTop)
-        self.win1.v_layout.addWidget(self.set_scale)
+        self.info_widget.v_layout.addWidget(self.set_scale)
         #self.win1.v_layout.addWidget(self.mouseTracker)
         #self.win1.v_layout.addWidget(self.viewportLogger)
-        self.win1.setLayout(self.win1.v_layout)
 
         # Load keybinds
         self.bind()
 
-        self.resize(800, 600)
+        QApplication.instance().installEventFilter(self)
+
+        super().resize(800, 600)
         self.showMaximized()
 
     def bind(self) -> None:
@@ -103,10 +105,17 @@ class MainWindow(QMainWindow):
         try:
             self.mainWidget.setFixedSize(size)
             self.canvas.setFixedHeight(height)
-            self.win1.setMaximumWidth(int(width*.2))
-            self.win1.setFixedHeight(height)
+            self.info_widget.setMaximumWidth(int(width*.2))
+            self.info_widget.setFixedHeight(height)
         except Exception as e:
             print(e)
+
+    def eventFilter(self, a0: 'QObject', a1: 'QEvent') -> bool:
+        if a1.type() == QEvent.MouseMove:
+            self.mainWidget.OnMouseMove.emit()
+            return True
+        
+        return super().eventFilter(a0, a1)
 
 if __name__ == "__main__":
     profiler = Profile()

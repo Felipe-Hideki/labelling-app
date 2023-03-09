@@ -2,7 +2,7 @@ from fast_autocomplete import AutoComplete
 
 from PyQt5.QtWidgets import QWidget, QLineEdit, QListWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QListWidgetItem
 from PyQt5.QtCore import QEventLoop, Qt
-from PyQt5.QtGui import QKeyEvent
+from PyQt5.QtGui import QKeyEvent, QCloseEvent, QCursor
 
 class EditWidget(QWidget):
     def __init__(self) -> None:
@@ -38,7 +38,7 @@ class EditWidget(QWidget):
         self.input.textChanged.connect(self.__on_text_changed)
 
         self.list_widget = QListWidget()
-        self.list_widget.setFixedHeight(100)
+        self.list_widget.setSortingEnabled(True)
         self.list_widget.itemDoubleClicked.connect(self.__on_item_double_clicked)
         self.populate_list(self.__name_list.keys())
 
@@ -61,8 +61,14 @@ class EditWidget(QWidget):
         self.loop.exec()
         self.clearFocus()
         return self.input.text()
+    
+    def closeEvent(self, a0: QCloseEvent) -> None:
+        self.__on_cancel_clicked()
+        return super().closeEvent(a0)
 
     def show(self) -> None:
+        mousepos = QCursor.pos()
+        self.move(mousepos.x(), mousepos.y())
         self.input.setText("")
         self.input.setFocus()
         return super().show()
@@ -98,8 +104,8 @@ class EditWidget(QWidget):
         self.__on_ok_clicked()
 
     def __on_ok_clicked(self) -> None:
-        if text := self.input.text() not in self.__name_list:
-            self.add_name(text)
+        if self.input.text() not in self.__name_list:
+            self.add_name(self.input.text())
         self.hide()
     
     def __on_cancel_clicked(self) -> None:

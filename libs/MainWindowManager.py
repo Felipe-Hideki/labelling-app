@@ -1,18 +1,33 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLayout
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtCore import QSize, Qt, pyqtSignal, QObject, QEvent
+from PyQt5.QtGui import QPalette, QColor, QMouseEvent
 from typing import overload
 
-class mainWidget(QWidget):
+class MainWindowManager(QWidget):
+    '''
+    This class is used to manage the main window layout
+
+    Args:
+        parent (QWidget): The parent widget
+    '''
+    OnMouseMove = pyqtSignal()
+
+    __instance = None
+
+    @classmethod
+    def instance(cls):
+        return cls.__instance
+
     @overload
-    def __init__(self, parent: QWidget=None): ...
+    def __init__(self, parent: QWidget): ...
 
     def __init__(self, **kwargs):
         super().__init__()
+        self.setMouseTracking(True)
         if 'parent' in kwargs:
             self.setParent(kwargs['parent'])
         else:
-            raise Exception()
+            raise Exception("Parent need to be set")
         self.mainLayout = QHBoxLayout()
         self.left_container = QWidget()
         self.right_container = QWidget()
@@ -26,19 +41,39 @@ class mainWidget(QWidget):
         self.set_right(self.right_container)
         self.setLayout(self.mainLayout)
 
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
+
+        MainWindowManager.__instance = self
+
     def size(self) -> QSize:
         return self.parent().size()
 
     def set_left(self, widget: QWidget) -> None:
+        '''
+        Set the left container widget
+
+        Args:
+            widget (QWidget): The widget to be set
+        '''
+        # Remove the old widget
         if self.left_container is not None:
             self.mainLayout.removeWidget(self.left_container)
+        
+        # Set the new widget and add it to the layout
         self.left_container = widget
         self.mainLayout.addWidget(self.left_container)
-        cmargins = self.mainLayout.contentsMargins()
-        self.mainLayout.setContentsMargins(0, 0, cmargins.right(), cmargins.bottom())
 
     def set_right(self, widget: QWidget) -> None:
+        '''
+        Set the right container widget
+
+        Args:
+            widget (QWidget): The widget to be set
+        '''
+        # Remove the old widget
         if self.left_container is not None:
             self.mainLayout.removeWidget(self.right_container)
+
+        # Set the new widget and add it to the layout
         self.right_container = widget
         self.mainLayout.addWidget(self.right_container)
