@@ -12,6 +12,7 @@ from libs.keyHandler import keyHandler
 from libs.CanvasScrollManager import CanvasScrollManager as CanvasScroll
 from libs.CoordinatesSystem import CoordinatesSystem, Transform
 from libs.Files_Manager import Files_Manager
+from libs.EditWidget import EditWidget
 
 CREATE, EDIT, MOVE, MOVING_SHAPE, MOVING_VERTEX = range(5)
 
@@ -101,6 +102,8 @@ class Canvas(QWidget):
         self.rect_to_draw: QRect = QRect() # the rect to draw the pixmap
         self.resized_pixmap: QPixmap = self.original_pixmap # the resized pixmap
 
+        self.edit_widget = EditWidget()
+
         Canvas._instance = self
 
     def resizeEvent(self, a0: QResizeEvent) -> None:
@@ -117,18 +120,12 @@ class Canvas(QWidget):
         p.drawPixmap(self.rect_to_draw, self.resized_pixmap)
         
         p.translate(self.rect_to_draw.topLeft())
-        p.setPen(QPen(Qt.white, 5))
-        p.drawPoint((self.get_mouse() - self.pixmap_rel_pos()).as_qpoint())
         for shape in self.shapes:
             shape.paint(p, self.scale)
         p.translate(-self.rect_to_draw.topLeft())
         
         if self.state == CREATE:
             self.draw_new_shape(p)
-
-        #p.setPen(QPen(Qt.white, 5))
-        #p.drawPoint(self.get_mouse().as_qpoint())
-        #p.drawPoint(self.rect().center())
 
         p.end()
 
@@ -293,24 +290,24 @@ class Canvas(QWidget):
             self.state = EDIT
             self.update()
             return
+        
+        shape_name = self.edit_widget.get_name()
 
+        if shape_name != "":
+            relative_pos = self.pixmap_rel_pos()
 
-        #print(f"{type(mousepos)=}")
+            _min = self.creating_pos - relative_pos
+            _max = mousepos - relative_pos
 
-        relative_pos = self.pixmap_rel_pos()
+            self.clip_to_pixmap(_min)
+            self.clip_to_pixmap(_max)
 
-        _min = self.creating_pos - relative_pos
-        _max = mousepos - relative_pos
+            shapepos = ShapePoints.square(_min / self.scale, _max / self.scale)
+            shape = Shape("", shapepos)
 
-        self.clip_to_pixmap(_min)
-        self.clip_to_pixmap(_max)
+            print(f"Created shape with min: {shape.top_left()} and max: {shape.bot_right()} with name: {shape_name}")
 
-        shapepos = ShapePoints.square(_min / self.scale, _max / self.scale)
-        shape = Shape("", shapepos)
-
-        print(f"Created shape with min: {shape.top_left()} and max: {shape.bot_right()}")
-
-        self.add_shape(shape)
+            self.add_shape(shape)
         self.creating_pos = None
         self.state = EDIT
         self.update()
@@ -449,8 +446,8 @@ class Canvas(QWidget):
 
         # IF CREATING
         if self.state == CREATE:
-            self.h_shapes = []
-            self.update()
+            if self.left_pressed:
+                self.update()
             return
 
         # HIGHLIGHT VERTEX
@@ -458,12 +455,9 @@ class Canvas(QWidget):
         if closest_vertex[0] is not None:
             self.unfill_all_shapes()
             closest_vertex[0].highlighted_vertex = closest_vertex[1]
-            self.highlighted_vertex = (closest_vertex[0], closest_vertex[1])
+            self.highlighted_vertex = closest_vertex
             self.update()
             return
-        
-        self.unhighlight_vertexes()
-        self.unfill_all_shapes()
 
         # HIGHLIGHT SHAPE
         if self.auto_fill_shape(closest_shape):

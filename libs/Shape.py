@@ -110,7 +110,7 @@ class Shape:
         self.__points[TOP_LEFT] = move_to
         self.__points[TOP_RIGHT] = Vector2Int(move_to.x + shape_size.width(), move_to.y)
         self.__points[BOTTOM_RIGHT] = move_to + shape_size
-        self.__points[BOTTOM_LEFT] = Vector2Int(move_to.x, move_to.y + shape_size.width())
+        self.__points[BOTTOM_LEFT] = Vector2Int(move_to.x, move_to.y + shape_size.height())
 
         self.__update()
 
@@ -183,16 +183,6 @@ class Shape:
 
         painter.fillRect(draw_rect, painter.brush().color())
         painter.drawRect(draw_rect)
-
-        # line_path = QPainterPath(points[0])
-
-        # index = 1
-        # for point in points[1:]:
-        #     line_path.lineTo(point)
-        # line_path.lineTo(points[0])
-
-        # painter.fillRect(line_path.boundingRect(), painter.brush().color())
-        # painter.drawPath(line_path)
 
         self.__draw_vertex(painter, scale, points)
 
