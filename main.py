@@ -34,6 +34,7 @@ class MainWindow(QMainWindow):
         self.keyHandler = keyHandler(self) if keyHandler.instance() is None else keyHandler.instance()
         self.setMenuBar(MenuBar.instance())
         self.files_manager = Files_Manager.instance()
+        self.files_manager.window = self
 
         # Setting up files_manager
         self.files_manager.OnLoadDir.connect(self.load)

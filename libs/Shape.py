@@ -65,7 +65,7 @@ class Shape:
         self.__update_scale(self.__scale)
 
     def __update_size(self) -> None:
-        self.__size = QSize(self.bot_right().x - self.top_left().x, self.bot_right().y - self.top_left().y)
+        self.__size = QSize(abs(self.bot_right().x - self.top_left().x), abs(self.bot_right().y - self.top_left().y))
     
     def __update_pos(self) -> None:
         self.__pos = Vector2(Vector2(self.__size) / 2 + self.top_left())
@@ -139,8 +139,6 @@ class Shape:
                 self.__points[BOTTOM_RIGHT] = Vector2Int(self.__points[BOTTOM_RIGHT].x, to.y)
             case _:
                 raise(InvalidVertexException(f"Tried to move vertex with index: {int(index)}"))
-            
-        print(self.__points)
 
         self.__update()
 
@@ -161,22 +159,7 @@ class Shape:
         return QPen(color, int(Shape.PEN_SIZE + extra * scale))
 
     def __scale_points(self, scale: float) -> list[QPoint]:
-        size = Vector2(self.__size)
-        _min, _max = Vector2Int.get_min_max(self.__points)
-        _min = Vector2(_min)
-        _max = Vector2(_max)
-        scaled = [None] * 4
-        scaled[TOP_LEFT] = round(_min * self.__scale)
-        scaled[TOP_RIGHT] = round(Vector2(_max.x, _min.y) * self.__scale)
-        scaled[BOTTOM_RIGHT] = round(_max * self.__scale)
-        scaled[BOTTOM_LEFT] = round(Vector2(_min.x, _max.y) * self.__scale)
-
-        # scaled[TOP_LEFT] = round((self.__pos - size / 2) * scale)
-        # scaled[TOP_RIGHT] = round((self.__pos + Vector2Int(size.x, -size.y)  / 2) * scale)
-        # scaled[BOTTOM_RIGHT] = round((self.__pos + size / 2) * scale)
-        # scaled[BOTTOM_LEFT] = round((self.__pos + Vector2Int(-size.x, size.y) / 2) * scale)
-
-        return [point.as_qpoint() for point in scaled]
+        return [(point * scale).as_qpoint() for point in self.__points]
 
     def __draw_square(self, painter: QPainter, scale: float):
 
@@ -246,7 +229,3 @@ class Shape:
             self.__update_scale(scale)
 
         self.__draw_square(painter, scale)
-        s = self.__scale
-        self.__scale = 1
-        self.__draw_square(painter, scale)
-        self.__scale = s

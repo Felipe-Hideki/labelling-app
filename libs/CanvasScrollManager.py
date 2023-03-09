@@ -84,6 +84,7 @@ class CanvasScrollManager(QObject):
         """
 
         __move_space = (cs_size - viewport_size)
+        print(__move_space)
         _range = __move_space / 2
 
         if __move_space.x > 0:

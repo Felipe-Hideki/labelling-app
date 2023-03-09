@@ -9,8 +9,9 @@ from libs.Shape import Shape
 from libs.Vector import Vector2Int
 from libs.CanvasHelper import CanvasHelper as helper
 from libs.keyHandler import keyHandler
-from libs.CanvasScrollArea import CanvasScrollManager as CanvasScroll
+from libs.CanvasScrollManager import CanvasScrollManager as CanvasScroll
 from libs.CoordinatesSystem import CoordinatesSystem, Transform
+from libs.Files_Manager import Files_Manager
 
 CREATE, EDIT, MOVE, MOVING_SHAPE, MOVING_VERTEX = range(5)
 
@@ -75,6 +76,7 @@ class Canvas(QWidget):
         self.multi_select = False # if the user is selecting multiple shapes
 
         self.selected_shapes: list[Shape] = [] # selected shapes
+        self.highlighted_vertex: tuple[Shape, int] = (None, None)
 
         self.scale = 1.00 # scale of the canvas
 
@@ -104,11 +106,8 @@ class Canvas(QWidget):
     def resizeEvent(self, a0: QResizeEvent) -> None:
         self.scroll_manager.update()
 
-        self.cs.resize(Vector2Int(self.original_pixmap.size() * self.scale) + self.pixmap_offset * min((self.scale - 1), 1))
-        self.viewport.resize(Vector2Int(self.size()) / self.scale)
-
-        self.resized_pixmap: QPixmap = self.original_pixmap.scaled(self.original_pixmap.size() * self.scale, Qt.KeepAspectRatio, Qt.FastTransformation)
-        self.rect_to_draw.setRect(self.pixmap_rel_pos().x, self.pixmap_rel_pos().y, self.resized_pixmap.width(), self.resized_pixmap.height())
+        self.update_coordinates()
+        self.update()
 
     def paintEvent(self, a0: QPaintEvent) -> None:
         p = self._painter
@@ -140,6 +139,7 @@ class Canvas(QWidget):
         
         self.update_coordinates()
         self.update_rect(None)
+        self.update()
 
     def add_shape(self, shape: Shape) -> None:
         '''
@@ -156,8 +156,14 @@ class Canvas(QWidget):
         '''
             Updates the coordinates system of the canvas
         '''
-        self.cs.resize(Vector2Int(self.original_pixmap.size() * self.scale) + self.pixmap_offset * min((self.scale - 1), 1))
-        self.viewport.resize(Vector2Int(self.size()) / self.scale)
+        ratio = self.size().width() / self.size().height()
+        self.cs.resize(Vector2Int(self.original_pixmap.size().width(), self.original_pixmap.size().width() / ratio) * self.scale)
+
+        self.viewport.resize(Vector2Int(self.size()))
+        self.resized_pixmap: QPixmap = self.original_pixmap.scaled(self.original_pixmap.size() * self.scale, Qt.KeepAspectRatio, Qt.FastTransformation)
+
+        self.scroll_manager.on_scale(self.cs.size(), self.viewport.size(), self.viewport.pos())
+        #self.viewport.resize(Vector2Int(self.size()) / self.scale)
 
     def update_rect(self, _: Vector2Int):
         '''
@@ -227,13 +233,8 @@ class Canvas(QWidget):
                 val: The new scale of the canvas
         '''
         self.scale = max(0.5, min(val, helper.MAX_ZOOM))
-        self.scroll_manager.on_scale(self.cs.size(), self.viewport.size(), self.viewport.pos())
-
-        self.resized_pixmap: QPixmap = self.original_pixmap.scaled(self.original_pixmap.size() * self.scale, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.cs.resize(Vector2Int(self.original_pixmap.size() * self.scale) + self.pixmap_offset * min(min(self.scale - 1, 0), 1))
-        self.viewport.resize(Vector2Int(self.size()) / self.scale)
-
-        self.rect_to_draw = QRect(self.pixmap_rel_pos().x, self.pixmap_rel_pos().y, self.resized_pixmap.width(), self.resized_pixmap.height())
+        self.update_coordinates()
+        self.update_rect(Vector2Int(0, 0))
         self.update()
 
     def pixmap_rel_pos(self) -> Vector2Int:
@@ -246,8 +247,10 @@ class Canvas(QWidget):
         '''
             Unhighlights all vertexes.
         '''
-        for s in self.shapes:
-            s.highlighted_vertex = -1
+        if self.highlighted_vertex[0] is None:
+            return
+        self.highlighted_vertex[0].highlighted_vertex = -1
+        self.highlighted_vertex = (None, None)
 
     def multi_select_mode(self) -> None:
         '''
@@ -404,11 +407,14 @@ class Canvas(QWidget):
         mousePos.clip(pix_min, pix_max)
 
     def wheelEvent(self, a0: QWheelEvent) -> None:
+        if self.scale + a0.angleDelta().y() / 120 * .1 > helper.MAX_ZOOM:
+            return
         self.set_scale(a0.angleDelta().y() / 120 * .1 + self.scale)
-        mousepos = self.get_mouse() - self.rect().center()
-        self.viewport.move_by(Vector2Int(mousepos.normalized() * 50) * self.scale)
 
     def mouseMoveEvent(self, a0: QMouseEvent) -> None:
+        if Files_Manager.instance().img_index() == -1:
+            print("returned")
+            return
         mousePos = self.get_mouse_relative()
 
         # IF MOVING
@@ -423,7 +429,10 @@ class Canvas(QWidget):
         if self.state == MOVING_VERTEX:
             self.unfill_all_shapes()
 
-            self.selected_shapes[0].move_vertex(mousePos, self.selected_shapes[0].highlighted_vertex)
+            """ mousePos.x = max(0, min(mousePos.x, self.cs.size().x))
+            mousePos.y = max(0, min(mousePos.y, self.cs.size().y)) """
+
+            self.selected_shapes[0].move_vertex(mousePos, self.highlighted_vertex[1])
             self.update()
             return
 
@@ -449,11 +458,11 @@ class Canvas(QWidget):
         if closest_vertex[0] is not None:
             self.unfill_all_shapes()
             closest_vertex[0].highlighted_vertex = closest_vertex[1]
+            self.highlighted_vertex = (closest_vertex[0], closest_vertex[1])
             self.update()
             return
         
         self.unhighlight_vertexes()
-
         self.unfill_all_shapes()
 
         # HIGHLIGHT SHAPE
@@ -461,8 +470,11 @@ class Canvas(QWidget):
             return
 
         # ELSE
-        self.h_shapes = []
-        self.update()
+        if len(self.h_shapes) > 0 or self.highlighted_vertex[0] is not None:
+            self.unhighlight_vertexes()
+            self.unfill_all_shapes()
+            self.h_shapes = []
+            self.update()
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
         mousePos = self.get_mouse_relative()

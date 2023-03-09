@@ -27,6 +27,7 @@ class CoordinatesSystem:
     def __init__(self, size: Vector2Int | QSize):
         self.__size = Vector2Int(size)
         self.__points: list[Vector2Int] = [None] * 4
+        self.__center = Vector2Int(0, 0)
         self.resize(self.__size)
 
     def get_vertice(self, pos: Position) -> Vector2Int:
@@ -57,12 +58,13 @@ class CoordinatesSystem:
         self.__points[BOTTOM_LEFT] = Vector2Int(0, val.y)
 
         self.__size = val
+        self.__center = self.__points[TOP_LEFT] + self.size() / 2
 
     def center(self) -> Vector2Int:
         '''
         Get the center of the coordinate system
         '''
-        return self.__points[TOP_LEFT] + self.size() / 2
+        return self.__center
 
     def to_global(self, pos: Vector2Int) -> Vector2Int:
         '''
@@ -160,7 +162,7 @@ class Transform(QObject):
 
         to = Vector2Int(move_to)
 
-        bigger_axis_flag: flags = flags(2)
+        bigger_axis_flag = flags(2)
 
         if self.__size.x > self.__global.size().x:
             bigger_axis_flag.set(0, True)
@@ -180,8 +182,8 @@ class Transform(QObject):
         # then move the object to the position
 
         # Fictional point at the point `to` + half of the size of the object
-        transform_border = to + self.size()/2
-        global_border = self.__global.size()/2
+        transform_border =  to + self.size() / 2
+        global_border = self.__global.size() / 2
 
         if transform_border.x > global_border.x and not bigger_axis_flag[0]:
             to.x -= transform_border.x - global_border.x
