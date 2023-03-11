@@ -13,6 +13,7 @@ from libs.CanvasScrollManager import CanvasScrollManager as CanvasScroll
 from libs.CoordinatesSystem import CoordinatesSystem, Transform
 from libs.Files_Manager import Files_Manager
 from libs.EditWidget import EditWidget
+from libs.MainWindowManager import MainWindowManager
 
 CREATE, EDIT, MOVE, MOVING_SHAPE, MOVING_VERTEX = range(5)
 
@@ -104,6 +105,8 @@ class Canvas(QWidget):
         self.resized_pixmap: QPixmap = self.original_pixmap # the resized pixmap
 
         self.edit_widget = EditWidget()
+        self.main = MainWindowManager.instance()
+        self.main.OnMouseMove.connect(self.OnMouseMove)
 
         Canvas._instance = self
 
@@ -397,7 +400,7 @@ class Canvas(QWidget):
         '''
             Returns the mouse position in pixels as Vector2Int.
         '''
-        return Vector2Int(self.mapFromGlobal(QCursor.pos()))
+        return Vector2Int(self.mapFromGlobal(self.main.mouse_pos()))
 
     def get_mouse_relative(self):
         '''
@@ -416,7 +419,7 @@ class Canvas(QWidget):
             return
         self.set_scale(a0.angleDelta().y() / 120 * .1 + self.scale)
 
-    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
+    def OnMouseMove(self) -> None:
         if Files_Manager.instance().img_index() == -1:
             return
         mousePos = self.get_mouse_relative()

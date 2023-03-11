@@ -112,8 +112,14 @@ class MainWindow(QMainWindow):
 
     def eventFilter(self, a0: 'QObject', a1: 'QEvent') -> bool:
         if a1.type() == QEvent.MouseMove:
-            self.mainWidget.OnMouseMove.emit()
-            return True
+            self.mainWidget.MouseMoved(a1)
+            return False
+        if a1.type() == QEvent.MouseButtonPress:
+            self.mainWidget.MouseClicked(a1)
+            return False
+        if a1.type() == QEvent.MouseButtonRelease:
+            self.mainWidget.MouseReleased(a1)
+            return False
         
         return super().eventFilter(a0, a1)
 

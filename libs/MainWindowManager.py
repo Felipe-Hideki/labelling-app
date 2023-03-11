@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLayout
-from PyQt5.QtCore import QSize, Qt, pyqtSignal, QObject, QEvent
-from PyQt5.QtGui import QPalette, QColor, QMouseEvent
+from PyQt5.QtCore import QSize, Qt, pyqtSignal, QPoint
+from PyQt5.QtGui import QPalette, QColor, QMouseEvent, QCursor
 from typing import overload
 
 class MainWindowManager(QWidget):
@@ -11,6 +11,8 @@ class MainWindowManager(QWidget):
         parent (QWidget): The parent widget
     '''
     OnMouseMove = pyqtSignal()
+    OnMouseClick = pyqtSignal(QMouseEvent)
+    OnMouseReleased = pyqtSignal(QMouseEvent)
 
     __instance = None
 
@@ -43,10 +45,16 @@ class MainWindowManager(QWidget):
 
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
 
+        self.__mousepos = QPoint(0, 0)
+
         MainWindowManager.__instance = self
+
+    def mouse_pos(self) -> QPoint:
+        return self.__mousepos
 
     def size(self) -> QSize:
         return self.parent().size()
+        
 
     def set_left(self, widget: QWidget) -> None:
         '''
@@ -77,3 +85,13 @@ class MainWindowManager(QWidget):
         # Set the new widget and add it to the layout
         self.right_container = widget
         self.mainLayout.addWidget(self.right_container)
+
+    def MouseMoved(self, event: QMouseEvent):
+        self.__mousepos = QCursor.pos()
+        self.OnMouseMove.emit()
+    
+    def MouseClicked(self, event: QMouseEvent):
+        self.OnMouseClick.emit(event)
+    
+    def MouseReleased(self, event: QMouseEvent):
+        self.OnMouseReleased.emit(event)
