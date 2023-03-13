@@ -10,10 +10,6 @@ class MainWindowManager(QWidget):
     Args:
         parent (QWidget): The parent widget
     '''
-    OnMouseMove = pyqtSignal()
-    OnMouseClick = pyqtSignal(QMouseEvent)
-    OnMouseReleased = pyqtSignal(QMouseEvent)
-
     __instance = None
 
     @classmethod
@@ -85,13 +81,3 @@ class MainWindowManager(QWidget):
         # Set the new widget and add it to the layout
         self.right_container = widget
         self.mainLayout.addWidget(self.right_container)
-
-    def MouseMoved(self, event: QMouseEvent):
-        self.__mousepos = QCursor.pos()
-        self.OnMouseMove.emit()
-    
-    def MouseClicked(self, event: QMouseEvent):
-        self.OnMouseClick.emit(event)
-    
-    def MouseReleased(self, event: QMouseEvent):
-        self.OnMouseReleased.emit(event)

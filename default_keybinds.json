@@ -12,7 +12,7 @@
     "create_shape": {
         "key": "w",
         "state_type": "KEY_DOWN",
-        "toggle": true
+        "toggle": false
     },
     "delete_shape": {
         "key": "delete",
@@ -21,12 +21,17 @@
     },
     "multi_select": {
         "key": "control",
-        "state_type": "KEY_DOWN",
+        "state_type": "KEY_CHANGE",
         "toggle": true
     },
     "move": {
         "key": "space",
         "state_type": "KEY_DOWN",
         "toggle": true
+    },
+    "edit": {
+        "key": "control+e",
+        "state_type": "KEY_DOWN",
+        "toggle": false
     }
 }

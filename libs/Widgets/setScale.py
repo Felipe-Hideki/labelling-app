@@ -1,10 +1,10 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QTimer
 
-from libs.Canvas import Canvas
+from libs.Canvas.CanvasWin import CanvasWin
 
 class setScale(QWidget):
-    def __init__(self, canvas: Canvas):
+    def __init__(self, canvas: CanvasWin):
         super().__init__()
         self.canvas = canvas
         self.label = QLabel()

@@ -1,23 +1,23 @@
 from typing import overload
 
-from PyQt5.QtCore import Qt, QSize, QPointF, QPoint, QRect, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QSizePolicy, QShortcut
-from PyQt5.QtGui import QColor, QPalette, QPainter, QPaintEvent, QMouseEvent, QWheelEvent, QPixmap, QImage, QPen, QResizeEvent, QCursor, QBrush, QKeySequence
+from PyQt5.QtCore import Qt, QSize, QRect, pyqtSignal, pyqtSlot
+from PyQt5.QtWidgets import QWidget, QSizePolicy, QMenu, QAction
+from PyQt5.QtGui import QColor, QPalette, QPainter, QPaintEvent, QMouseEvent, QWheelEvent, QPixmap, QImage, QPen, QResizeEvent, QBrush
 
-from libs.ShapePoints import ShapePoints
-from libs.Shape import Shape
-from libs.Vector import Vector2Int
-from libs.CanvasHelper import CanvasHelper as helper
-from libs.keyHandler import keyHandler
-from libs.CanvasScrollManager import CanvasScrollManager as CanvasScroll
-from libs.CoordinatesSystem import CoordinatesSystem, Transform
-from libs.Files_Manager import Files_Manager
-from libs.EditWidget import EditWidget
-from libs.MainWindowManager import MainWindowManager
+from libs.Widgets.ShapePoints import ShapePoints
+from libs.Standalones.Vector import Vector2Int
+from libs.Widgets.EditWidget import EditWidget
+from libs.Standalones.Files_Manager import Files_Manager
+from libs.Canvas.Shape import Shape
+from libs.Canvas.CanvasHelper import CanvasHelper as helper
+from libs.Canvas.CanvasScrollManager import CanvasScrollManager as CanvasScroll
+from libs.Canvas.CoordinatesSystem import CoordinatesSystem, Transform
+from libs.Handlers.MouseManager import MouseManager
+from libs.Handlers.keyHandler import keyHandler, ActionBind
 
-CREATE, EDIT, MOVE, MOVING_SHAPE, MOVING_VERTEX = range(5)
+CREATE, EDIT, MOVE, MOVING_SHAPE, MOVING_VERTEX, COPY = range(6)
 
-class Canvas(QWidget):
+class CanvasWin(QWidget):
     """
         Canvas is the widget that handles and contains all the shapes.
 
@@ -25,10 +25,15 @@ class Canvas(QWidget):
             Canvas.instance() -> Canvas\n
             Canvas(parent) -> Canvas
     """
-    on_add_shape = pyqtSignal(Shape)
-    on_remove_shape = pyqtSignal(list)
+    OnAddShape = pyqtSignal(Shape)
+    OnRemoveShape = pyqtSignal(list)
+    OnSelectShape = pyqtSignal(Shape)
+    OnDeselectShape = pyqtSignal(Shape)
 
-    _instance = None
+    OnBeginEdit = pyqtSignal()
+    OnEndEdit = pyqtSignal(str)
+
+    __instance = None
 
     EDIT_AXIS_DEFAULT_COLOR = QColor(255, 255, 255, 200)
     NEW_SHAPE_DEFAULT_COLOR = QColor(255, 255, 255, 100)
@@ -40,16 +45,16 @@ class Canvas(QWidget):
         '''
             Returns the instance of Canvas, if the instance is None then creates one,
         '''
-        if not cls._instance:
-            cls._instance = cls()
-        return cls._instance
+        if not cls.__instance:
+            cls.__instance = cls()
+        return cls.__instance
 
     @overload
     def __init__(self, parent: QWidget = None) -> None: ...
 
     def __init__(self, **kwargs) -> None:
-        assert Canvas._instance is None, "Tried to instantiate 'Canvas' class more than once"
-        super(Canvas, self).__init__()
+        assert CanvasWin.__instance is None, "Tried to instantiate 'Canvas' class more than once"
+        super(CanvasWin, self).__init__()
 
         self.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
         self.setMouseTracking(True)
@@ -61,7 +66,7 @@ class Canvas(QWidget):
         self.scroll_manager = CanvasScroll(self)
         self.scroll_manager.scroll_changed.connect(self.on_scroll_change)
 
-        self.background_color = Canvas.DEFAULT_BACKGROUND_COLOR
+        self.background_color = CanvasWin.DEFAULT_BACKGROUND_COLOR
 
         pal = QPalette()
         pal.setColor(QPalette.Window, self.background_color)
@@ -83,12 +88,15 @@ class Canvas(QWidget):
 
         self.scale = 1.00 # scale of the canvas
 
-        self.creating_pos = None # origin of the new shape
+        self.shape_copy: Shape = None
+
+        self.creating_pos: Vector2Int = None # origin of the new shape
         self.mouse_offset = Vector2Int(0, 0) # offset of the mouse relative to the moving shape
 
         self.last_mouse_pos = Vector2Int(0, 0) # last mouse position to get the delta
         self.mouse_moved = 0. # the amount of pixels the mouse moved to allow moving the shape
 
+        self.was_selected = False
         self.clicked_shape = None # the shape that was clicked
         self.shape_formation: list[(Shape, Vector2Int)] = [] # the difference between the shape's position and the clicked shape's position
 
@@ -105,10 +113,32 @@ class Canvas(QWidget):
         self.resized_pixmap: QPixmap = self.original_pixmap # the resized pixmap
 
         self.edit_widget = EditWidget()
-        self.main = MainWindowManager.instance()
-        self.main.OnMouseMove.connect(self.OnMouseMove)
 
-        Canvas._instance = self
+        # Key bindings
+        kh = keyHandler.instance()
+        kh.bind_to(ActionBind.create_shape, self.create_mode)
+        kh.bind_to(ActionBind.delete_shape, self.delete)
+        kh.bind_to(ActionBind.multi_select, self.multi_select_mode)
+        kh.bind_to(ActionBind.move, self.move_mode)
+        kh.bind_to(ActionBind.edit, self.edit_label_slot)
+        self.OnBeginEdit.connect(self.edit_label)
+        # Mouse bind
+        self.mouseManager = MouseManager.instance()
+        self.mouseManager.OnMove.connect(self.OnMouseMove)
+
+        # On file load bind
+        files_manager = Files_Manager.instance()
+        files_manager.OnLoadImage.connect(self.load_pixmap)
+
+        self.chosing_option = False # The user is chosing an option in the menu?
+
+        # Right click Menu
+        self.rclick_menu = QMenu(self)
+        copy = QAction("Copy", self)
+        copy.triggered.connect(self._create_copy)
+        self.rclick_menu.addAction(copy)
+
+        CanvasWin.__instance = self
 
     def resizeEvent(self, a0: QResizeEvent) -> None:
         self.scroll_manager.update()
@@ -126,6 +156,8 @@ class Canvas(QWidget):
         p.translate(self.rect_to_draw.topLeft())
         for shape in self.shapes:
             shape.paint(p, self.scale)
+        if self.shape_copy is not None:
+            self.shape_copy.paint(p, self.scale)
         p.translate(-self.rect_to_draw.topLeft())
         
         if self.state == CREATE:
@@ -136,7 +168,7 @@ class Canvas(QWidget):
 
         p.end()
 
-    def set_pixmap(self, path: str) -> None:
+    def load_pixmap(self, path: str) -> None:
         assert len(path) > 0, "Path is empty"
         self.original_pixmap = QPixmap(QImage.fromData(open(path, "rb").read()))
         self.resized_pixmap: QPixmap = self.original_pixmap.scaled(self.original_pixmap.size() * self.scale, Qt.KeepAspectRatio, Qt.FastTransformation)
@@ -153,13 +185,16 @@ class Canvas(QWidget):
                 shape: the shape to add
         '''
         self.shapes.append(shape)
-        self.on_add_shape.emit(shape)
+        self.OnAddShape.emit(shape)
         self.update()
 
     def update_coordinates(self) -> None:
         '''
             Updates the coordinates system of the canvas
         '''
+        if self.original_pixmap.isNull():
+            return
+
         ratio = self.size().width() / self.size().height()
         self.cs.resize(Vector2Int(self.original_pixmap.size().width(), self.original_pixmap.size().width() / ratio) * self.scale)
 
@@ -250,7 +285,7 @@ class Canvas(QWidget):
         '''
         return -self.viewport.pos() + self.rect().center() - self.resized_pixmap.size() / 2
 
-    def unhighlight_vertexes(self) -> None:
+    def unhighlight_vertex(self) -> None:
         '''
             Unhighlights all vertexes.
         '''
@@ -279,6 +314,19 @@ class Canvas(QWidget):
         self.state = MOVE if self.state != MOVE else EDIT
         self.update()
 
+    def edit_label_slot(self):
+        self.OnBeginEdit.emit()
+
+    @pyqtSlot()
+    def edit_label(self) -> None:
+        if len(self.selected_shapes) == 0:
+            return
+        name = self.edit_widget.get_name("Rename Shape")
+        
+        [shape.set_name(name) for shape in self.selected_shapes]
+
+        self.OnEndEdit.emit(name)
+
     def create_mode(self) -> None:
         '''
             Sets the canvas to create mode.
@@ -301,7 +349,7 @@ class Canvas(QWidget):
             self.update()
             return
         
-        shape_name = self.edit_widget.get_name()
+        shape_name = self.edit_widget.get_name("Create Shape")
 
         if shape_name != "":
             relative_pos = self.pixmap_rel_pos()
@@ -313,7 +361,7 @@ class Canvas(QWidget):
             self.clip_to_pixmap(_max)
 
             shapepos = ShapePoints.square(_min / self.scale, _max / self.scale)
-            shape = Shape("", shapepos)
+            shape = Shape(shape_name, shapepos)
 
             print(f"Created shape with min: {shape.top_left()} and max: {shape.bot_right()} with name: {shape_name}")
 
@@ -322,12 +370,21 @@ class Canvas(QWidget):
         self.state = EDIT
         self.update()
 
+    def _create_copy(self) -> None:
+        if self.shape_copy is None:
+            return
+        
+        self.add_shape(self.shape_copy)
+        self.select(self.shape_copy, True, False)
+        self.shape_copy = None
+        self.state = EDIT
+
     def delete(self) -> None:
         '''
             Deletes all selected shapes.
         '''
         print(f"Deleting {len(self.selected_shapes)} shapes")
-        self.on_remove_shape.emit(self.selected_shapes)
+        self.OnRemoveShape.emit(self.selected_shapes)
         while len(self.selected_shapes) > 0:
             shape = self.selected_shapes[0]
             self.shapes.remove(shape)
@@ -349,32 +406,55 @@ class Canvas(QWidget):
             Args:
                 shape: The shape to deselect
         '''
+        assert shape in self.selected_shapes, "Shape not found in selected shapes list"
         shape.selected = False
         self.selected_shapes.remove(shape)
+        self.OnDeselectShape.emit(shape)
         self.update()
 
-    def select(self, shape: Shape, force: bool = False) -> None:
+    def __select(self, shape: Shape):
+        self.selected_shapes.append(shape)
+        shape.selected = True
+        self.OnSelectShape.emit(shape)
+        self.update()
+
+    def select(self, shape: Shape, force: bool = False, multi_select: bool = None) -> None:
         '''
             Selects a shape.
 
             Args:
                 shape: The shape to select
                 force: If true the shape will be selected even if it is already selected
+                multi_select: If false the selected list will be reset, default value is \
+                the multi_select field
         '''
+        if multi_select is None:
+            multi_select = self.multi_select
 
-        if shape in self.selected_shapes and not force:
-            self.deselect(shape)
+        if not multi_select and len(self.selected_shapes) > 1:
+            self.deselect_all()
+            self.__select(shape)
             return
 
-        if not self.multi_select or shape is None:
+        if shape in self.selected_shapes and not force:
+            if not multi_select:
+                self.deselect_all()
+                return
+            self.deselect(shape)
+            return
+        
+        if force and shape in self.selected_shapes:
+            self.was_selected = True
+        else:
+            self.was_selected = False
+
+        if not multi_select or shape is None:
             self.deselect_all()
 
         if shape not in self.selected_shapes:
-            self.selected_shapes.append(shape)
-            shape.selected = True
-            self.update()
+            self.__select(shape)
     
-    def select_multiple(self, shapes: list[Shape]) -> None:
+    def select_multiple(self, shapes: list[Shape], force: bool = False) -> None:
         '''
             Selects multiple shapes.
 
@@ -382,13 +462,15 @@ class Canvas(QWidget):
                 shapes: The shapes to select
         '''
         for shape in shapes:
-            self.select(shape)
+            self.select(shape, force)
 
     def auto_fill_shape(self, shape: Shape = None) -> bool:
         '''
             Auto fills a shape if the mouse is within a shape.
         '''
         if shape is not None:
+            if self.filled_shape:
+                self.filled_shape.unfill()
             self.filled_shape = shape
             shape.fill = True
             self.update()
@@ -400,7 +482,7 @@ class Canvas(QWidget):
         '''
             Returns the mouse position in pixels as Vector2Int.
         '''
-        return Vector2Int(self.mapFromGlobal(self.main.mouse_pos()))
+        return Vector2Int(self.mapFromGlobal(self.mouseManager.current_pos))
 
     def get_mouse_relative(self):
         '''
@@ -420,7 +502,7 @@ class Canvas(QWidget):
         self.set_scale(a0.angleDelta().y() / 120 * .1 + self.scale)
 
     def OnMouseMove(self) -> None:
-        if Files_Manager.instance().img_index() == -1:
+        if self.original_pixmap.isNull() or self.chosing_option:
             return
         mousePos = self.get_mouse_relative()
 
@@ -432,12 +514,19 @@ class Canvas(QWidget):
             self.last_mouse_pos = self.get_mouse()
             return
 
+        # IF COPYING
+        if self.state == COPY:
+            self.unfill_shape()
+
+            mousePos -= self.mouse_offset
+
+            self.shape_copy.move(mousePos, Vector2Int(self.original_pixmap.size()))
+            self.update()
+            return
+
         # IF MOVING VERTEX
         if self.state == MOVING_VERTEX:
             self.unfill_shape()
-
-            """ mousePos.x = max(0, min(mousePos.x, self.cs.size().x))
-            mousePos.y = max(0, min(mousePos.y, self.cs.size().y)) """
 
             self.selected_shapes[0].move_vertex(mousePos, self.highlighted_vertex[1])
             self.update()
@@ -464,6 +553,7 @@ class Canvas(QWidget):
         closest_shape, closest_vertex = helper.get_within(mousePos, self.shapes)
         if closest_vertex[0] is not None:
             self.unfill_shape()
+            self.unhighlight_vertex()
             closest_vertex[0].highlighted_vertex = closest_vertex[1]
             self.highlighted_vertex = closest_vertex
             self.update()
@@ -471,18 +561,32 @@ class Canvas(QWidget):
 
         # HIGHLIGHT SHAPE
         if self.auto_fill_shape(closest_shape):
-            self.unhighlight_vertexes()
+            self.unhighlight_vertex()
             return
 
         # ELSE
         if len(self.h_shapes) > 0 or self.highlighted_vertex[0] is not None or self.filled_shape is not None:
-            self.unhighlight_vertexes()
+            self.unhighlight_vertex()
             self.unfill_shape()
             self.h_shapes = []
             self.update()
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if self.chosing_option:
+            return
         mousePos = self.get_mouse_relative()
+
+        if a0.button() == Qt.RightButton:
+            # IF COPYING
+            closest_shape = helper.get_shape_within(mousePos, self.shapes)
+            if closest_shape is not None:
+                self.shape_copy = closest_shape.copy()
+                self.state = COPY
+                self.mouse_offset = mousePos - closest_shape.top_left()
+                self.mouse_moved = 0
+                self.deselect_all()
+                self.select(closest_shape, True, True)
+                self.select(self.shape_copy, True, True)
 
         if a0.button() != Qt.LeftButton:
             return
@@ -497,7 +601,6 @@ class Canvas(QWidget):
         # IF CREATE
         if self.state == CREATE:
             self.creating_pos = self.get_mouse()
-            self.update()
             return
 
         # MOVE VERTEX
@@ -535,6 +638,11 @@ class Canvas(QWidget):
         self.update()
 
     def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.RightButton:
+            if self.mouse_moved <= helper.MIN_DIST_TO_MOVE:
+                self.chosing_option = True
+                self.rclick_menu.exec_(self.mapToGlobal(a0.pos()))
+                self.chosing_option = False
         if a0.button() != Qt.LeftButton:
             return
         
@@ -542,6 +650,10 @@ class Canvas(QWidget):
 
         if self.state == CREATE:
             self.create()
+
+        if self.state == MOVING_SHAPE and self.mouse_moved <= helper.MIN_DIST_TO_MOVE \
+            and self.was_selected:
+            self.deselect(self.clicked_shape)
 
         if self.state == MOVING_VERTEX or self.state == MOVING_SHAPE:
             self.state = EDIT

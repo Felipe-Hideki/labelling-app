@@ -2,9 +2,9 @@ from PyQt5.QtWidgets import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QSizePoli
 from PyQt5.QtGui import QCursor
 from PyQt5.QtCore import QTimer, QSize
 
-from libs.CanvasHelper import CanvasHelper as helper
-from libs.Canvas import Canvas
-from libs.Vector import Vector2Int
+from libs.Canvas.CanvasHelper import CanvasHelper as helper
+from libs.Canvas import CanvasWin
+from libs.Standalones.Vector import Vector2Int
 
 class CoordinatesLog(QWidget):
     def __init__(self):
@@ -67,7 +67,7 @@ class CoordinatesLog(QWidget):
 
     def on_timer_ends(self):
         try:
-            canvas = Canvas.instance()
+            canvas = CanvasWin.instance()
             viewport_size = canvas.viewport.size()
             pixmap_at =  -canvas.viewport.pos()
             pixmap_size = canvas.original_pixmap.size() * canvas.scale

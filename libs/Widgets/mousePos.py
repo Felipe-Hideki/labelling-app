@@ -4,9 +4,9 @@ from PyQt5.QtWidgets import QLabel, QWidget, QHBoxLayout, QVBoxLayout, QSizePoli
 from PyQt5.QtGui import QCursor
 from PyQt5.QtCore import QTimer, QSize
 
-from libs.Canvas import Canvas
-from libs.Vector import Vector2Int
-from libs.keyHandler import keyHandler as keyboard
+from libs.Canvas import CanvasWin
+from libs.Standalones.Vector import Vector2Int
+from libs.Handlers.keyHandler import keyHandler as keyboard
 
 class MousePos(QWidget):
     def __init__(self):
@@ -48,12 +48,12 @@ class MousePos(QWidget):
         self.setLayout(vl)     
 
         self.key_pressed.setText("Key pressed: None")
-        Canvas.instance().on_add_shape.connect(self.on_shape_add)
+        CanvasWin.instance().OnAddShape.connect(self.on_shape_add)
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)   
 
     def on_shape_add(self, shape):
-        self.shape_count.setText(f"Shape count: {len(Canvas.instance().shapes)}")
+        self.shape_count.setText(f"Shape count: {len(CanvasWin.instance().shapes)}")
 
     def has_pressed(self): 
         if self.key_pressed.text() == "Key pressed: W":
@@ -78,7 +78,7 @@ class MousePos(QWidget):
 
     def on_timer_ends(self):
         try:
-            canvas = Canvas.instance()
+            canvas = CanvasWin.instance()
             cursor = Vector2Int(canvas.mapFromGlobal(QCursor.pos()))
             #relative_pos = helper.relative_pos(canvas.viewport.to_global(cursor), canvas.rect_to_draw.topLeft())
             relative_pos = canvas.viewport.pos() + cursor

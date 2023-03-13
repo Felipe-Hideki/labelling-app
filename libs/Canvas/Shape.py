@@ -1,10 +1,11 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-from libs.ShapePoints import ShapePoints
-from libs.Vector import Vector2Int, Vector2
-from libs.MyException import ShapeNoPointsException, InvalidVertexException
-from libs.CoordinatesSystem import Position, TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT
+from libs.Widgets.ShapePoints import ShapePoints
+from libs.Standalones.Vector import Vector2Int, Vector2
+from libs.Standalones.MyException import ShapeNoPointsException, InvalidVertexException
+from libs.Canvas.CoordinatesSystem import Position, TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT
+from libs.Standalones.Utils import Utils
 
     
 class Shape:
@@ -40,9 +41,11 @@ class Shape:
 
         _min, _max = Vector2Int.get_min_max(self.__points)
         self.__size = QSize(_max.x - _min.x, _max.y - _min.y)
-        self.__pos = Vector2(Vector2(self.__size) / 2 + _min)
         self.__scale = 1.0
         self.__scaled = [point.as_qpoint() for point in self.__points]
+
+    def set_name(self, name: str):
+        self.name = name
 
     def top_left(self) -> Vector2Int:
         return self.__points[TOP_LEFT]
@@ -58,6 +61,9 @@ class Shape:
     
     def size(self) -> QSize:
         return self.__size
+    
+    def copy(self) -> 'Shape':
+        return Shape(self.name, self.__points.copy())
     
     def __update(self) -> None:
         self.__update_size()
@@ -168,7 +174,7 @@ class Shape:
         elif self.fill:
             painter.setBrush(QBrush(self.fill_pattern_color, self.fill_pattern))
         else:
-            painter.setBrush(QColor(0, 0, 0, 0))
+            painter.setBrush(Utils.Empty_Brush)
 
         if self.get_highlighted_vertex() is not None and not self.selected:
             painter.setPen(self.__get_pen(scale, self.highlighted_color))
@@ -181,7 +187,8 @@ class Shape:
         _min, _max = Vector2Int.get_min_max(points)
         draw_rect = QRect(_min, _max)
 
-        painter.fillRect(draw_rect, painter.brush().color())
+        if self.fill or self.selected:
+            painter.fillRect(draw_rect, painter.brush().color())
         painter.drawRect(draw_rect)
 
         self.__draw_vertex(painter, scale, points)

@@ -2,10 +2,13 @@ from typing import overload
 
 from PyQt5.QtWidgets import QMainWindow, QApplication
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QBrush, QColor
 
-from libs.MyException import InvalidInstantiation
+from libs.Standalones.MyException import InvalidInstantiation
 
 class Utils:
+    Empty_Brush = QBrush(QColor(0, 0, 0, 0))
+
     def __new__(cls: type['Utils']) -> 'Utils':
         raise InvalidInstantiation("Tried to instantiate 'Utils' class, a data only class.")
 

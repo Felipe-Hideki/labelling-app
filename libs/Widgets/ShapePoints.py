@@ -3,8 +3,8 @@ from typing import overload
 
 from PyQt5.QtCore import QPointF
 
-from libs.Vector import Vector2Int
-from libs.Utils import Utils as utils
+from libs.Standalones.Vector import Vector2Int
+from libs.Standalones.Utils import Utils as utils
 
 TOP_LEFT = 0
 TOP_RIGHT = 1
@@ -30,6 +30,9 @@ class ShapePoints:
         except Exception as e:
             print(f"{type(self.points[index])=}")
             raise(e)
+
+    def copy(self) -> 'ShapePoints':
+        return ShapePoints(self.points)
 
     @staticmethod
     @overload

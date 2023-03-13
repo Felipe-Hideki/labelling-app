@@ -2,7 +2,7 @@ from fast_autocomplete import AutoComplete
 
 from PyQt5.QtWidgets import QWidget, QLineEdit, QListWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QListWidgetItem
 from PyQt5.QtCore import QEventLoop, Qt
-from PyQt5.QtGui import QKeyEvent, QCloseEvent, QCursor
+from PyQt5.QtGui import QKeyEvent, QCloseEvent, QCursor, QFocusEvent
 
 class EditWidget(QWidget):
     def __init__(self) -> None:
@@ -42,6 +42,8 @@ class EditWidget(QWidget):
         self.list_widget.itemDoubleClicked.connect(self.__on_item_double_clicked)
         self.populate_list(self.__name_list.keys())
 
+        self.setWindowModality(Qt.ApplicationModal)
+
         self.v_layout.addWidget(self.input_label)
         self.v_layout.addWidget(self.input)
         self.v_layout.addWidget(self.list_widget)
@@ -55,9 +57,9 @@ class EditWidget(QWidget):
         self.__name_list[name] = {}
         self.__autocomplete = AutoComplete(words=self.__name_list)
 
-    def get_name(self) -> str:
+    def get_name(self, title_name="labelling") -> str:
+        self.setWindowTitle(title_name)
         self.show()
-        self.setWindowModality(Qt.ApplicationModal)
         self.loop.exec()
         self.clearFocus()
         return self.input.text()
@@ -79,7 +81,7 @@ class EditWidget(QWidget):
     
     def keyPressEvent(self, a0: QKeyEvent) -> None:
         if (a0.key() == Qt.Key_Enter or a0.key() == Qt.Key_Return) and self.input.hasFocus():
-            self.__on_text_finished()
+            self.__on_ok_clicked()
 
     def populate_list(self, dictionary: list[str]) -> None:
         self.list_widget.clear()
@@ -88,7 +90,7 @@ class EditWidget(QWidget):
 
     def __on_item_double_clicked(self, item: QListWidgetItem) -> None:
         self.input.setText(item.text())
-        self.__on_text_finished()
+        self.__on_ok_clicked()
 
     def __on_text_changed(self, text: str) -> None:
         if self.__autocomplete is None:
@@ -100,10 +102,9 @@ class EditWidget(QWidget):
 
         self.populate_list([found[0] for found in self.__autocomplete.search(text)])
 
-    def __on_text_finished(self) -> None:
-        self.__on_ok_clicked()
-
     def __on_ok_clicked(self) -> None:
+        if self.list_widget.currentItem() is not None and self.input.text() == "":
+            self.input.setText(self.list_widget.currentItem().text())
         if self.input.text() not in self.__name_list:
             self.add_name(self.input.text())
         self.hide()

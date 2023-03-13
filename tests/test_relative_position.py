@@ -11,7 +11,7 @@ sys.path.append(parent_dir)
 from PyQt5.QtCore import QPoint, QRect
 from PyQt5.QtWidgets import QWidget
 
-from libs.CanvasHelper import CanvasHelper
+from libs.Canvas.CanvasHelper import CanvasHelper
 
 class testWidget(QWidget):
     def __init__(self, rect: QRect):

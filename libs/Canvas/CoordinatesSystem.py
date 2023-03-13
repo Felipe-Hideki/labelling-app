@@ -2,8 +2,8 @@ from enum import IntEnum
 
 from PyQt5.QtCore import QSize, pyqtSignal, QObject
 
-from libs.Vector import Vector2Int
-from libs.flag  import flags
+from libs.Standalones.Vector import Vector2Int
+from libs.Standalones.flag  import flags
 
 class Position(IntEnum):
     TOP_LEFT = 0
