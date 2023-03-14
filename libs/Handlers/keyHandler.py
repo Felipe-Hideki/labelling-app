@@ -38,9 +38,13 @@ class ActionBind(Enum):
         return self.name
 
 class Key:
-    def __init__(self, key: str):
+    def __init__(self, key: str, modifiers: str = ""):
         self.__key_str = key
+        self.__mod_str = modifiers
         self.keys: set[str] = set()
+        self.modifiers: set[str] = set()
+        for mod in modifiers.split('+'):
+            self.modifiers.add(keyboard._canonical_names.normalize_name(mod))
         for k in key.split('+'):
             self.keys.add(keyboard._canonical_names.normalize_name(k))
 
@@ -111,7 +115,7 @@ class keyHandler:
             ActionBind.delete_shape: bind(Key('delete'), keyStates.KEY_DOWN, False),
             ActionBind.multi_select: bind(Key('control'), keyStates.KEY_CHANGE, True),
             ActionBind.move: bind(Key('space'), keyStates.KEY_DOWN, True),
-            ActionBind.edit: bind(Key('control+e'), keyStates.KEY_DOWN, False)
+            ActionBind.edit: bind(Key('e', 'control'), keyStates.KEY_DOWN, False)
             }
             self.save()
         if os.path.exists(self.__keybinds_path):
@@ -134,7 +138,9 @@ class keyHandler:
 
     def __reset_keys(self):
         for bind_details in self.__binds.values():
-            bind_details.state = False
+            if bind_details.state:
+                bind_details.state = False
+                self.__broadcast(bind_details.runnable)
 
     def __hook(self, event: keyboard.KeyboardEvent) -> None:
         if not self.__mainWindow.isActiveWindow():

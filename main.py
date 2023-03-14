@@ -6,7 +6,6 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
 from libs.Canvas.CanvasWin import CanvasWin as Canvas
-from libs.Canvas.Shape import Shape, ShapePoints
 from libs.Widgets.setScale import setScale
 from libs.Widgets.MainWindowManager import MainWindowManager
 from libs.Widgets.MenuBar import MenuBar
@@ -17,7 +16,6 @@ from libs.Handlers.MouseManager import MouseManager
 from libs.Handlers.keyHandler import keyHandler
 from libs.Standalones.PersistentData import PersistentData
 from libs.Standalones.Files_Manager import Files_Manager
-from libs.Standalones.Vector import Vector2Int
 
 __appname__ = "labelImg"
         

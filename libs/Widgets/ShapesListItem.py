@@ -16,12 +16,18 @@ class ShapesListItem(QListWidgetItem):
         self.setText(self.shape.name)
 
     def OnSelected(self) -> None:
-        self.canvas.select(self.shape, True, True)
+        if self.shape.selected:
+            return
+        self.shape.selected = True
+        self.canvas.selected_shapes.append(self.shape)
+        self.canvas.update()
 
     def OnDeselected(self):
         if self.shape not in self.canvas.selected_shapes:
             return
-        self.canvas.deselect(self.shape)
+        self.shape.selected = False
+        self.canvas.selected_shapes.remove(self.shape)
+        self.canvas.update()
 
     def OnNameEdit(self, name: str):
         self.setText(self.shape.name)

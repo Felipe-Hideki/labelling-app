@@ -1,6 +1,7 @@
 from typing import overload
+from time import time
 
-from PyQt5.QtCore import Qt, QSize, QRect, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, QSize, QRect, pyqtSignal, pyqtSlot, QPoint
 from PyQt5.QtWidgets import QWidget, QSizePolicy, QMenu, QAction
 from PyQt5.QtGui import QColor, QPalette, QPainter, QPaintEvent, QMouseEvent, QWheelEvent, QPixmap, QImage, QPen, QResizeEvent, QBrush
 
@@ -8,6 +9,7 @@ from libs.Widgets.ShapePoints import ShapePoints
 from libs.Standalones.Vector import Vector2Int
 from libs.Widgets.EditWidget import EditWidget
 from libs.Standalones.Files_Manager import Files_Manager
+from libs.Standalones.pascal_voc_io import PascalVocReader
 from libs.Canvas.Shape import Shape
 from libs.Canvas.CanvasHelper import CanvasHelper as helper
 from libs.Canvas.CanvasScrollManager import CanvasScrollManager as CanvasScroll
@@ -29,6 +31,8 @@ class CanvasWin(QWidget):
     OnRemoveShape = pyqtSignal(list)
     OnSelectShape = pyqtSignal(Shape)
     OnDeselectShape = pyqtSignal(Shape)
+
+    OnChangedShapes = pyqtSignal(list)
 
     OnBeginEdit = pyqtSignal()
     OnEndEdit = pyqtSignal(str)
@@ -129,6 +133,7 @@ class CanvasWin(QWidget):
         # On file load bind
         files_manager = Files_Manager.instance()
         files_manager.OnLoadImage.connect(self.load_pixmap)
+        files_manager.OnLoadImage.connect(self.load_shapes)
 
         self.chosing_option = False # The user is chosing an option in the menu?
 
@@ -168,14 +173,24 @@ class CanvasWin(QWidget):
 
         p.end()
 
+    def load_shapes(self, filepath: str):
+        reader = PascalVocReader(filepath)
+
+        del self.shapes[:]
+        self.shapes = reader.get_shapes()
+        self.OnChangedShapes.emit(self.shapes)
+
     def load_pixmap(self, path: str) -> None:
         assert len(path) > 0, "Path is empty"
+        t0 = time()
         self.original_pixmap = QPixmap(QImage.fromData(open(path, "rb").read()))
         self.resized_pixmap: QPixmap = self.original_pixmap.scaled(self.original_pixmap.size() * self.scale, Qt.KeepAspectRatio, Qt.FastTransformation)
-        
+        print(f"Loaded image in {time() - t0}s")
+        t0 = time()
         self.update_coordinates()
         self.update_rect(None)
         self.update()
+        print(f"Updated canvas in {time() - t0}s")
 
     def add_shape(self, shape: Shape) -> None:
         '''
@@ -196,7 +211,7 @@ class CanvasWin(QWidget):
             return
 
         ratio = self.size().width() / self.size().height()
-        self.cs.resize(Vector2Int(self.original_pixmap.size().width(), self.original_pixmap.size().width() / ratio) * self.scale)
+        self.cs.resize(Vector2Int(self.original_pixmap.size().width() + 50, self.original_pixmap.size().width() / ratio)* self.scale)
 
         self.viewport.resize(Vector2Int(self.size()))
         self.resized_pixmap: QPixmap = self.original_pixmap.scaled(self.original_pixmap.size() * self.scale, Qt.KeepAspectRatio, Qt.FastTransformation)
@@ -497,9 +512,11 @@ class CanvasWin(QWidget):
         mousePos.clip(pix_min, pix_max)
 
     def wheelEvent(self, a0: QWheelEvent) -> None:
-        if self.scale + a0.angleDelta().y() / 120 * .1 > helper.MAX_ZOOM:
+        if self.scale + a0.angleDelta().y() / 120 * .3 > helper.MAX_ZOOM:
+            if self.scale < helper.MAX_ZOOM:
+                self.set_scale(helper.MAX_ZOOM)
             return
-        self.set_scale(a0.angleDelta().y() / 120 * .1 + self.scale)
+        self.set_scale(a0.angleDelta().y() / 120 * .3 + self.scale)
 
     def OnMouseMove(self) -> None:
         if self.original_pixmap.isNull() or self.chosing_option:
@@ -588,6 +605,14 @@ class CanvasWin(QWidget):
                 self.select(closest_shape, True, True)
                 self.select(self.shape_copy, True, True)
 
+        if a0.button() == Qt.LeftButton and self.state == COPY:
+            self.state = EDIT
+            self.mouse_offset = Vector2Int()
+            self.mouse_moved = 0
+            self.deselect_all()
+            self.shape_copy = None
+            return
+
         if a0.button() != Qt.LeftButton:
             return
         
@@ -638,10 +663,15 @@ class CanvasWin(QWidget):
         self.update()
 
     def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
-        if a0.button() == Qt.RightButton:
+        if a0.button() == Qt.RightButton and self.state == COPY:
             if self.mouse_moved <= helper.MIN_DIST_TO_MOVE:
                 self.chosing_option = True
-                self.rclick_menu.exec_(self.mapToGlobal(a0.pos()))
+                if self.rclick_menu.exec_(self.mapToGlobal(a0.pos())) is None:
+                    self.state = EDIT
+                    self.mouse_offset = Vector2Int()
+                    self.mouse_moved = 0
+                    self.deselect_all()
+                    self.shape_copy = None
                 self.chosing_option = False
         if a0.button() != Qt.LeftButton:
             return

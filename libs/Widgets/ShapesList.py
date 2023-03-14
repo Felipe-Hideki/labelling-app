@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
+from libs.Standalones.Files_Manager import Files_Manager
 from libs.Widgets.ShapesListItem import ShapesListItem
 from libs.Canvas.CanvasWin import CanvasWin
 from libs.Canvas.Shape import Shape
@@ -30,6 +31,8 @@ class ShapeList(QWidget):
         canvas.OnRemoveShape.connect(self.remove_shapes)
         canvas.OnSelectShape.connect(self.__selected_shape)
         canvas.OnDeselectShape.connect(self.__deselected_shape)
+        canvas.OnChangedShapes.connect(self.__changed_shapes)
+        
 
         self.v_layout.addWidget(self.label)
         self.v_layout.addWidget(self.__list)
@@ -64,9 +67,17 @@ class ShapeList(QWidget):
             [self.__list.itemFromIndex(index).OnDeselected() for index in deselected.indexes()]
 
 
+    @pyqtSlot(list)
+    def __changed_shapes(self, shapes: list[Shape]):
+        self.__shapes_list.clear()
+        self.__list.clear()
+
+        for shape in shapes:
+            self.add_shape(shape)
+
     def __rem_shape(self, shape: Shape):
-        self.__list.removeItemWidget(self.__shapes_list[shape])
-        del self.__shapes_list[shape], shape
+        self.__list.takeItem(self.__list.row(self.__shapes_list[shape]))
+        del self.__shapes_list[shape]
 
     def add_shape(self, shape: Shape):
         list_item = ShapesListItem(shape)
