@@ -1,6 +1,6 @@
 import keyboard
 import json
-import os.path
+import os
 
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtCore import QThreadPool, QRunnable
@@ -9,6 +9,9 @@ from libs.handlers.keyboard.Bind import bind
 from libs.handlers.keyboard.ActionBind import ActionBind
 from libs.handlers.keyboard.Key import Key
 from libs.handlers.keyboard.KeyStates import KeyStates
+
+def save_folder() -> str:
+    return './Settings/Keybinds'
 
 class KeyHandler:
     '''
@@ -19,8 +22,8 @@ class KeyHandler:
     '''
     __instance = None
 
-    __default_keybinds_path = './default_keybinds.json'
-    __keybinds_path = './keybinds.json'
+    __default_keybinds_path = f'{save_folder()}/default_keybinds.json'
+    __keybinds_path = f'{save_folder()}/keybinds.json'
     
     @classmethod
     def instance(cls: 'KeyHandler') -> 'KeyHandler':
@@ -43,6 +46,9 @@ class KeyHandler:
         self.__mainWindow = mainWindow
         self.lost_focus = False
         self.global_thread = QThreadPool.globalInstance()
+
+        if not os.path.exists(save_folder()):
+            os.makedirs(save_folder())
 
         if not os.path.exists(self.__keybinds_path) and not os.path.exists(self.__default_keybinds_path):
             self.__binds: dict[str, bind] = {
