@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QApplication, QSizePolicy
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QMouseEvent
 
-from libs.Handlers.MouseManager import MouseManager
+from libs.handlers.MouseManager import MouseManager
 
 class InfoWidget(QWidget):
     RANGE_TO_CHANGE_SIZE = 15

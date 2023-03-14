@@ -3,8 +3,8 @@ from typing import overload
 
 from PyQt5.QtCore import QPointF
 
-from libs.Standalones.Vector import Vector2Int
-from libs.Standalones.Utils import Utils as utils
+from libs.standalones.Vector import Vector2Int
+from libs.standalones.Utils import Utils as utils
 
 TOP_LEFT = 0
 TOP_RIGHT = 1

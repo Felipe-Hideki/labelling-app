@@ -2,7 +2,7 @@ from enum import Enum
 
 from PyQt5.QtWidgets import QWidget, QAction, QMenu, QMenuBar, QApplication
 
-from libs.Standalones.Utils import Utils
+from libs.standalones.Utils import Utils
 
 class actions(Enum):
     file = 0

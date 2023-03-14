@@ -20,7 +20,7 @@
         "toggle": false
     },
     "multi_select": {
-        "key": "ctrl",
+        "key": "control",
         "state_type": "KEY_CHANGE",
         "toggle": true
     },
@@ -30,7 +30,7 @@
         "toggle": true
     },
     "edit": {
-        "key": "ctrl+e",
+        "key": "control+e",
         "state_type": "KEY_DOWN",
         "toggle": false
     }

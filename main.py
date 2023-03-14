@@ -5,17 +5,17 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
-from libs.Canvas.CanvasWin import CanvasWin as Canvas
-from libs.Widgets.setScale import setScale
-from libs.Widgets.MainWindowManager import MainWindowManager
-from libs.Widgets.MenuBar import MenuBar
-from libs.Widgets.InfoWidget import InfoWidget
-from libs.Widgets.ShapesList import ShapeList
-from libs.Widgets.FileListWidget import FileListWidget
-from libs.Handlers.MouseManager import MouseManager
-from libs.Handlers.keyHandler import keyHandler
-from libs.Standalones.PersistentData import PersistentData
-from libs.Standalones.Files_Manager import Files_Manager
+from libs.canvas.CanvasWin import CanvasWin as Canvas
+from libs.widgets.setScale import setScale
+from libs.widgets.MainWindowManager import MainWindowManager
+from libs.widgets.MenuBar import MenuBar
+from libs.widgets.InfoWidget import InfoWidget
+from libs.widgets.ShapesList import ShapeList
+from libs.widgets.FileListWidget import FileListWidget
+from libs.handlers.MouseManager import MouseManager
+from libs.handlers.keyboard.KeyHandler import KeyHandler
+from libs.standalones.PersistentData import PersistentData
+from libs.standalones.Files_Manager import Files_Manager
 
 __appname__ = "labelImg"
         
@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle(__appname__)
         # Standalones
-        self.keyHandler = keyHandler(self)
+        self.keyHandler = KeyHandler(self)
         self.__settings = PersistentData()
         self.files_manager = Files_Manager()
 

@@ -1,11 +1,11 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-from libs.Widgets.ShapePoints import ShapePoints
-from libs.Standalones.Vector import Vector2Int, Vector2
-from libs.Standalones.MyException import ShapeNoPointsException, InvalidVertexException
-from libs.Canvas.CoordinatesSystem import Position, TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT
-from libs.Standalones.Utils import Utils
+from libs.widgets.ShapePoints import ShapePoints
+from libs.standalones.Vector import Vector2Int, Vector2
+from libs.standalones.MyException import ShapeNoPointsException, InvalidVertexException
+from libs.canvas.CoordinatesSystem import Position, TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT
+from libs.standalones.Utils import Utils
 
     
 class Shape:

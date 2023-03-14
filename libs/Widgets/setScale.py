@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QTimer
 
-from libs.Canvas.CanvasWin import CanvasWin
+from libs.canvas.CanvasWin import CanvasWin
 
 class setScale(QWidget):
     def __init__(self, canvas: CanvasWin):

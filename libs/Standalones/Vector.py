@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from math import sqrt, floor
 from typing import overload, Union
 
-from libs.Standalones.Utils import Utils as utils
+from libs.standalones.Utils import Utils as utils
 
 @dataclass
 class Vector2:

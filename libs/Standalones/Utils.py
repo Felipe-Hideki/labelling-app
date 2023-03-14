@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QMainWindow, QApplication
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QBrush, QColor
 
-from libs.Standalones.MyException import InvalidInstantiation
+from libs.standalones.MyException import InvalidInstantiation
 
 class Utils:
     Empty_Brush = QBrush(QColor(0, 0, 0, 0))

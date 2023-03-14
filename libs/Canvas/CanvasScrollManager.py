@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QAbstractScrollArea, QScrollBar
 from PyQt5.QtCore import QRect, Qt, QSize, QPoint, pyqtSignal, QObject
 
-from libs.Standalones.Vector import Vector2Int
+from libs.standalones.Vector import Vector2Int
 
 def get_canvas_style_sheet():
     return "QScrollBar\

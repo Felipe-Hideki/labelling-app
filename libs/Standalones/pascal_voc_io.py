@@ -8,8 +8,8 @@ from lxml import etree
 import codecs
 from time import sleep
 
-from libs.Canvas.Shape import Shape, ShapePoints
-from libs.Standalones.Vector import Vector2Int
+from libs.canvas.Shape import Shape, ShapePoints
+from libs.standalones.Vector import Vector2Int
 
 XML_EXT = '.xml'
 JPG_EXT = '.jpg'

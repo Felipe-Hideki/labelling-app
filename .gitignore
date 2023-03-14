@@ -4,5 +4,8 @@ __pycache__
 *.prof
 *.png
 *.json
+stats
+PersistentData.stg
+*.xml
 !default*.json
 !.gitignore

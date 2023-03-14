@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from libs.Canvas.Shape import Shape
-from libs.Canvas.CanvasWin import CanvasWin
+from libs.canvas.Shape import Shape
+from libs.canvas.CanvasWin import CanvasWin
 
 class ShapesListItem(QListWidgetItem):
     def __init__(self, Shape: Shape):

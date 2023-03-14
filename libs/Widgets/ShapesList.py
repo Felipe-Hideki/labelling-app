@@ -2,10 +2,10 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-from libs.Standalones.Files_Manager import Files_Manager
-from libs.Widgets.ShapesListItem import ShapesListItem
-from libs.Canvas.CanvasWin import CanvasWin
-from libs.Canvas.Shape import Shape
+from libs.standalones.Files_Manager import Files_Manager
+from libs.widgets.ShapesListItem import ShapesListItem
+from libs.canvas.CanvasWin import CanvasWin
+from libs.canvas.Shape import Shape
 
 class ShapeList(QWidget):
     __instance = None

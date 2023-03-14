@@ -3,9 +3,9 @@ import os
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import pyqtSignal, QObject
 
-from libs.Widgets.MenuBar import MenuBar, actions, fileMenu
-from libs.Handlers.keyHandler import keyHandler, ActionBind
-from libs.Standalones.PersistentData import PersistentData, PersistentDataType
+from libs.widgets.MenuBar import MenuBar, actions, fileMenu
+from libs.handlers.keyboard.KeyHandler import KeyHandler, ActionBind
+from libs.standalones.PersistentData import PersistentData, PersistentDataType
 
 class Files_Manager(QObject):
     OnLoadDir = pyqtSignal(list)
@@ -26,7 +26,7 @@ class Files_Manager(QObject):
 
         MenuBar.instance().actions_dict[actions.file][fileMenu.open].triggered.connect(self.open_folder)
 
-        kh = keyHandler.instance()
+        kh = KeyHandler.instance()
         kh.bind_to(ActionBind.next_image, self.next_img)
         kh.bind_to(ActionBind.prev_image, self.prev_img)
 

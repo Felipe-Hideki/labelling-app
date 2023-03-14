@@ -57,8 +57,9 @@ class EditWidget(QWidget):
         self.__name_list[name] = {}
         self.__autocomplete = AutoComplete(words=self.__name_list)
 
-    def get_name(self, title_name="labelling") -> str:
+    def get_name(self, default: str="", title_name: str="labelling") -> str:
         self.setWindowTitle(title_name)
+        self.input.setText(default)
         self.show()
         self.loop.exec()
         self.clearFocus()

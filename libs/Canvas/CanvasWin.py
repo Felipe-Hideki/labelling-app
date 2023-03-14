@@ -5,17 +5,17 @@ from PyQt5.QtCore import Qt, QSize, QRect, pyqtSignal, pyqtSlot, QPoint
 from PyQt5.QtWidgets import QWidget, QSizePolicy, QMenu, QAction
 from PyQt5.QtGui import QColor, QPalette, QPainter, QPaintEvent, QMouseEvent, QWheelEvent, QPixmap, QImage, QPen, QResizeEvent, QBrush
 
-from libs.Widgets.ShapePoints import ShapePoints
-from libs.Standalones.Vector import Vector2Int
-from libs.Widgets.EditWidget import EditWidget
-from libs.Standalones.Files_Manager import Files_Manager
-from libs.Standalones.pascal_voc_io import PascalVocReader
-from libs.Canvas.Shape import Shape
-from libs.Canvas.CanvasHelper import CanvasHelper as helper
-from libs.Canvas.CanvasScrollManager import CanvasScrollManager as CanvasScroll
-from libs.Canvas.CoordinatesSystem import CoordinatesSystem, Transform
-from libs.Handlers.MouseManager import MouseManager
-from libs.Handlers.keyHandler import keyHandler, ActionBind
+from libs.widgets.ShapePoints import ShapePoints
+from libs.standalones.Vector import Vector2Int
+from libs.widgets.EditWidget import EditWidget
+from libs.standalones.Files_Manager import Files_Manager
+from libs.standalones.pascal_voc_io import PascalVocReader
+from libs.canvas.Shape import Shape
+from libs.canvas.CanvasHelper import CanvasHelper as helper
+from libs.canvas.CanvasScrollManager import CanvasScrollManager as CanvasScroll
+from libs.canvas.CoordinatesSystem import CoordinatesSystem, Transform
+from libs.handlers.MouseManager import MouseManager
+from libs.handlers.keyboard.KeyHandler import KeyHandler, ActionBind
 
 CREATE, EDIT, MOVE, MOVING_SHAPE, MOVING_VERTEX, COPY = range(6)
 
@@ -119,7 +119,7 @@ class CanvasWin(QWidget):
         self.edit_widget = EditWidget()
 
         # Key bindings
-        kh = keyHandler.instance()
+        kh = KeyHandler.instance()
         kh.bind_to(ActionBind.create_shape, self.create_mode)
         kh.bind_to(ActionBind.delete_shape, self.delete)
         kh.bind_to(ActionBind.multi_select, self.multi_select_mode)
@@ -336,7 +336,7 @@ class CanvasWin(QWidget):
     def edit_label(self) -> None:
         if len(self.selected_shapes) == 0:
             return
-        name = self.edit_widget.get_name("Rename Shape")
+        name = self.edit_widget.get_name(self.selected_shapes[0].name, "Rename Shape")
         
         [shape.set_name(name) for shape in self.selected_shapes]
 

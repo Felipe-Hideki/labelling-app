@@ -1,79 +1,16 @@
 import keyboard
 import json
 import os.path
-from enum import Enum
 
 from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtCore import QRunnable, QThreadPool
+from PyQt5.QtCore import QThreadPool, QRunnable
 
-class test(QRunnable):
-    def __init__(self, funcs: set[any]):
-        super().__init__()
-        self.funcs = funcs
+from libs.handlers.keyboard.Bind import bind
+from libs.handlers.keyboard.ActionBind import ActionBind
+from libs.handlers.keyboard.Key import Key
+from libs.handlers.keyboard.KeyStates import KeyStates
 
-        self.setAutoDelete(False)
-
-    def run(self):
-        for func in self.funcs:
-            func()
-
-class keyStates(Enum):
-    KEY_DOWN = 0
-    KEY_UP = 1
-    KEY_CHANGE = 2
-
-    def __str__(self) -> str:
-        return self.name
-
-class ActionBind(Enum):
-    next_image = 0
-    prev_image = 1
-    create_shape = 2
-    delete_shape = 3
-    multi_select = 4
-    move = 5
-    edit = 6
-
-    def __str__(self) -> str:
-        return self.name
-
-class Key:
-    def __init__(self, key: str, modifiers: str = ""):
-        self.__key_str = key
-        self.__mod_str = modifiers
-        self.keys: set[str] = set()
-        self.modifiers: set[str] = set()
-        for mod in modifiers.split('+'):
-            self.modifiers.add(keyboard._canonical_names.normalize_name(mod))
-        for k in key.split('+'):
-            self.keys.add(keyboard._canonical_names.normalize_name(k))
-
-    def __contains__(self, val: str) -> bool:
-        return val in self.keys
-    
-    def __str__(self) -> str:
-        return self.__key_str
-
-    def __repr__(self) -> str:
-        return self.__str__()
-    
-    def __eq__(self, other: set[str]) -> bool:
-        return self.keys == other
-
-class bind:
-    def __init__(self, key: Key, state_type: keyStates, toggle: bool, funcs: list[any] = [], state: bool = False):
-        self.key = key
-        self.state_type = state_type
-        self.toggle = toggle
-        self.funcs = set(funcs)
-        self.state = state
-        self.runnable = test(self.funcs)
-
-    def add_func(self, func: any):
-        self.funcs.add(func)
-        self.runnable.funcs.add(func)
-
-class keyHandler:
+class KeyHandler:
     '''
     Singleton class for handling key presses. It needs to be instantialized before calling instance().
 
@@ -86,13 +23,13 @@ class keyHandler:
     __keybinds_path = './keybinds.json'
     
     @classmethod
-    def instance(cls: 'keyHandler') -> 'keyHandler':
+    def instance(cls: 'KeyHandler') -> 'KeyHandler':
         '''
             Returns the instance of the class. None if no instances was created.
         '''
         return cls.__instance
 
-    def __new__(cls: 'keyHandler', mainWindow: QMainWindow) -> 'keyHandler':
+    def __new__(cls: 'KeyHandler', mainWindow: QMainWindow) -> 'KeyHandler':
         if not cls.__instance:
             cls.__instance = super().__new__(cls)
             cls.__instance.__load(mainWindow)
@@ -101,7 +38,7 @@ class keyHandler:
     def __init__(self, mainWindow: QMainWindow) -> None: ...
 
     def __load(self, mainWindow: QMainWindow) -> None:
-        self.__keys_pressed: set[str] = set()
+        self.__keys_pressed: Key = Key()
         self.__changed_key = ""
         self.__mainWindow = mainWindow
         self.lost_focus = False
@@ -109,26 +46,26 @@ class keyHandler:
 
         if not os.path.exists(self.__keybinds_path) and not os.path.exists(self.__default_keybinds_path):
             self.__binds: dict[str, bind] = {
-            ActionBind.next_image: bind(Key('d'), keyStates.KEY_DOWN, False),
-            ActionBind.prev_image: bind(Key('a'), keyStates.KEY_DOWN, False),
-            ActionBind.create_shape: bind(Key('w'), keyStates.KEY_DOWN, False),
-            ActionBind.delete_shape: bind(Key('delete'), keyStates.KEY_DOWN, False),
-            ActionBind.multi_select: bind(Key('control'), keyStates.KEY_CHANGE, True),
-            ActionBind.move: bind(Key('space'), keyStates.KEY_DOWN, True),
-            ActionBind.edit: bind(Key('e', 'control'), keyStates.KEY_DOWN, False)
+            ActionBind.next_image: bind(Key('d'), KeyStates.KEY_DOWN, False),
+            ActionBind.prev_image: bind(Key('a'), KeyStates.KEY_DOWN, False),
+            ActionBind.create_shape: bind(Key('w'), KeyStates.KEY_DOWN, False),
+            ActionBind.delete_shape: bind(Key('delete'), KeyStates.KEY_DOWN, False),
+            ActionBind.multi_select: bind(Key('control'), KeyStates.KEY_CHANGE, True),
+            ActionBind.move: bind(Key('space'), KeyStates.KEY_DOWN, True),
+            ActionBind.edit: bind(Key('control+e'), KeyStates.KEY_DOWN, False)
             }
             self.save()
         if os.path.exists(self.__keybinds_path):
             with open(self.__keybinds_path, 'r') as f:
-                binds = json.load(f)
+                binds: dict[str, str] = json.load(f)
         elif os.path.exists(self.__default_keybinds_path):
             with open(self.__default_keybinds_path, 'r') as f:
-                binds = json.load(f)
+                binds: dict[str, str] = json.load(f)
         
         self.__binds: dict[str, bind] = {}
 
         for key, val in binds.items():
-            self.__binds[ActionBind[key]] = bind(Key(val['key']), keyStates[val['state_type']], val['toggle'])
+            self.__binds[ActionBind[key]] = bind(Key(val['key']), KeyStates[val['state_type']], val['toggle'])
 
         keyboard.hook(self.__hook)
 
@@ -136,54 +73,47 @@ class keyHandler:
     def __broadcast(self, runnable: QRunnable) -> None:
         self.global_thread.start(runnable)
 
-    def __reset_keys(self):
-        for bind_details in self.__binds.values():
-            if bind_details.state:
-                bind_details.state = False
-                self.__broadcast(bind_details.runnable)
-
     def __hook(self, event: keyboard.KeyboardEvent) -> None:
-        if not self.__mainWindow.isActiveWindow():
-            self.__keys_pressed.clear()
-            if not self.lost_focus:
-                self.__reset_keys()
-            self.lost_focus = True
-            return
+        
         self.__changed_key = event.name
 
         if event.event_type == keyboard.KEY_DOWN:
-            self.__keys_pressed.add(event.name)
+            self.__keys_pressed.set_key(self.__changed_key)
             self.__on_key_press(event)
         elif event.event_type == keyboard.KEY_UP:
             self.__on_key_up(event)
             if not self.lost_focus:
-                self.__keys_pressed.remove(event.name)
+                self.__keys_pressed.rem_key(self.__changed_key)
         
         self.lost_focus = False
 
     def __on_key_press(self, event: keyboard.KeyboardEvent) -> None:
+        if not self.__mainWindow.isActiveWindow():
+            return
         for bind_details in self.__binds.values():
-            if bind_details.state_type == keyStates.KEY_CHANGE and bind_details.key == self.__keys_pressed:
-                if not bind_details.state:
-                    self.__broadcast(bind_details.runnable)
-                    bind_details.state = True
+            if bind_details.state_type == KeyStates.KEY_CHANGE and not bind_details.state \
+                    and bind_details.key == self.__keys_pressed and not keyboard.is_modifier(self.__changed_key):
+                self.__broadcast(bind_details.runnable)
+                bind_details.state = True
                 continue
 
-            if bind_details.state_type == keyStates.KEY_DOWN and not bind_details.state \
-                    and self.__changed_key in bind_details.key and bind_details.key == self.__keys_pressed:
+            if bind_details.state_type == KeyStates.KEY_DOWN and not bind_details.state \
+                    and bind_details.key == self.__keys_pressed and not keyboard.is_modifier(self.__changed_key):
                 self.__broadcast(bind_details.runnable)
                 bind_details.state = True
 
     def __on_key_up(self, event: keyboard.KeyboardEvent) -> None:
+        if not self.__mainWindow.isActiveWindow():
+            return
         for bind_details in self.__binds.values():
-            if bind_details.state_type == keyStates.KEY_CHANGE and bind_details.key == self.__keys_pressed:
-                if bind_details.state:
-                    self.__broadcast(bind_details.runnable)
-                    bind_details.state = False
+            if bind_details.state_type == KeyStates.KEY_CHANGE and bind_details.state \
+                    and bind_details.key == self.__keys_pressed:
+                self.__broadcast(bind_details.runnable)
+                bind_details.state = False
                 continue
 
-            if (bind_details.state_type == keyStates.KEY_UP or (bind_details.toggle and bind_details.state)) \
-                    and self.__keys_pressed == bind_details.key and self.__changed_key in bind_details.key:
+            if (bind_details.state_type == KeyStates.KEY_UP or (bind_details.toggle and bind_details.state)) \
+                    and bind_details.key == self.__keys_pressed:
                 self.__broadcast(bind_details.runnable)
                 bind_details.state = False
             if bind_details.state and self.__changed_key in bind_details.key:

@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-from libs.Standalones.Files_Manager import Files_Manager
+from libs.standalones.Files_Manager import Files_Manager
 
 class FileListWidget(QWidget):
     def __init__(self, parent=None):

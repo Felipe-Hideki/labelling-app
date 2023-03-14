@@ -2,9 +2,9 @@ from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import QLine, QPoint, QSize, QRect
 from PyQt5.QtGui import QCursor
 
-from libs.Canvas.Shape import Shape
-from libs.Standalones.Vector import Vector2Int
-from libs.Standalones.MyException import InvalidInstantiation
+from libs.canvas.Shape import Shape
+from libs.standalones.Vector import Vector2Int
+from libs.standalones.MyException import InvalidInstantiation
 
 class CanvasHelper:
     """
