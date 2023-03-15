@@ -151,7 +151,7 @@ class PascalVocReader:
         y_min = int(float(bnd_box.find('ymin').text))
         x_max = int(float(bnd_box.find('xmax').text))
         y_max = int(float(bnd_box.find('ymax').text))
-        points = [Vector2Int(x_min, y_min), Vector2Int(x_min, y_max), Vector2Int(x_max, y_max), Vector2Int(x_max, y_min)]
+        points = [Vector2Int(x_min, y_min), Vector2Int(x_max, y_min), Vector2Int(x_max, y_max), Vector2Int(x_min, y_max)]
         self.shapes.append(Shape(label, points))
 
     #japa

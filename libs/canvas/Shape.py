@@ -17,8 +17,8 @@ class Shape:
     DEFAULT_FILL_PATTERN_COLOR = QColor(100, 100, 100, 150)
     DEFAULT_FILL_PATTERN = Qt.BDiagPattern
 
-    VERTEX_SIZE = 3
-    VERTEX_HIGHLIGHT_GROWTH = 2
+    VERTEX_SIZE = 4
+    VERTEX_HIGHLIGHT_GROWTH = 3
 
     PEN_SIZE = 1
     
@@ -166,6 +166,12 @@ class Shape:
     def __scale_points(self, scale: float) -> list[QPoint]:
         return [(point * scale).as_qpoint() for point in self.__points]
 
+    def __vertex_size(self, increase: bool = False) -> int:
+        scale = self.__scale if self.__scale >= 1 else self.__scale+abs(self.__scale - 1)
+        if not increase:
+            return int(self.VERTEX_SIZE * scale)
+        return int((self.VERTEX_SIZE + self.VERTEX_HIGHLIGHT_GROWTH) * self.__scale)
+
     def __draw_square(self, painter: QPainter, scale: float):
 
         if self.selected:
@@ -175,7 +181,7 @@ class Shape:
         else:
             painter.setBrush(Utils.Empty_Brush)
 
-        if self.get_highlighted_vertex() is not None and not self.selected:
+        if self.get_highlighted_vertex() is not None:
             painter.setPen(self.__get_pen(scale, self.highlighted_color))
         else:
             painter.setPen(self.__get_pen(scale, self.lines_color))
@@ -193,30 +199,25 @@ class Shape:
         self.__draw_vertex(painter, scale, points)
 
     def __draw_vertex(self, painter: QPainter, scale: float, points: list[QPoint]):
-        # if self.fill or self.selected:
-        #     self.__fill(painter, scale, points)
-
         # Get the highlighted vertex and points
         h_vertex = self.get_highlighted_vertex()
         # Set the pen and brush
-        painter.setPen(self.__get_pen(scale, self.vertex_color))
-        painter.setBrush(self.vertex_color)
+        if h_vertex is None:
+            painter.setPen(self.__get_pen(scale, self.vertex_color))
+            painter.setBrush(self.vertex_color)
+        else:
+            painter.setPen(self.__get_pen(scale, self.highlighted_color))
+            painter.setBrush(self.highlighted_color)
 
         index = 0
         while index < len(points):
             p = points[index]
+            size = self.__vertex_size(h_vertex == index)
             if h_vertex is not None and h_vertex == index:
-                # if the vertex is highlighted, draw a bigger circle around it with the highlighted color
-                painter.setPen(self.__get_pen(scale, self.highlighted_color))
-                painter.setBrush(self.highlighted_color)
-                size = int((self.VERTEX_SIZE + self.VERTEX_HIGHLIGHT_GROWTH) * scale)
-                painter.drawEllipse(p.x() - int(size / 2), p.y() - int(size / 2), size, size)
-                painter.setBrush(self.vertex_color)
-                painter.setPen(self.__get_pen(scale, self.vertex_color))
+                painter.drawRect(p.x() - size // 2, p.y() - size // 2, size, size)
                 index += 1
                 continue
-            size = int(self.VERTEX_SIZE * scale)
-            painter.drawEllipse(p.x() - int(size / 2), p.y() - int(size / 2), size, size)
+            painter.drawEllipse(p.x() - size // 2, p.y() - size // 2, size, size)
             index += 1
 
     def paint(self, painter: QPainter, scale: float):

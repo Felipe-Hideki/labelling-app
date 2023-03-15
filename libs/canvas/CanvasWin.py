@@ -170,9 +170,6 @@ class CanvasWin(QWidget):
         if self.state == CREATE:
             self.draw_new_shape(p)
 
-        p.setPen(QPen(Qt.white, 5))
-        p.drawPoint(self.get_mouse().as_qpoint())
-
         p.end()
 
     def load_shapes(self, filepath: str):
@@ -413,13 +410,14 @@ class CanvasWin(QWidget):
         '''
             Deletes all selected shapes.
         '''
-        print(f"Deleting {len(self.selected_shapes)} shapes")
+        print(f"Deleting {len(self.selected_shapes)} shapes from total shapes {len(self.shapes)}")
+        print(f"differences = {set(self.selected_shapes) - set(self.shapes)}")
         self.OnRemoveShape.emit(self.selected_shapes)
         while len(self.selected_shapes) > 0:
             shape = self.selected_shapes[0]
-            self.shapes.remove(shape)
-            self.deselect(shape)
-            del shape
+            shape.selected = False
+            del self.shapes[self.shapes.index(shape)], self.selected_shapes[0]
+        self.selected_shapes = []
         self.update()
 
     def deselect_all(self) -> None:
