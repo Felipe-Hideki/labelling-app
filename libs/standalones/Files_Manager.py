@@ -3,9 +3,11 @@ import os
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import pyqtSignal, QObject
 
+from libs.standalones.Utils import Utils as utils
 from libs.widgets.MenuBar import MenuBar, actions, fileMenu
 from libs.handlers.keyboard.KeyHandler import KeyHandler, ActionBind
 from libs.standalones.PersistentData import PersistentData, PersistentDataType
+
 
 class Files_Manager(QObject):
     OnLoadDir = pyqtSignal(list)
@@ -47,6 +49,7 @@ class Files_Manager(QObject):
         self.__images = [os.path.join(path, img) for img in os.listdir(path) if img.endswith(".jpg") or img.endswith(".png")]
         if len(self.__images) <= 0:
             return
+        utils.natural_sort(self.__images, key=lambda s: s.lower())
         self.__folder_size = len(self.__images)
         self.__cur_img = 0
         

@@ -47,6 +47,9 @@ class Shape:
     def set_name(self, name: str):
         self.name = name
 
+    def get_points(self) -> ShapePoints:
+        return self.__points.copy()
+
     def top_left(self) -> Vector2Int:
         return self.__points[TOP_LEFT]
     
@@ -67,14 +70,10 @@ class Shape:
     
     def __update(self) -> None:
         self.__update_size()
-        self.__update_pos()
         self.__update_scale(self.__scale)
 
     def __update_size(self) -> None:
         self.__size = QSize(abs(self.bot_right().x - self.top_left().x), abs(self.bot_right().y - self.top_left().y))
-    
-    def __update_pos(self) -> None:
-        self.__pos = Vector2(Vector2(self.__size) / 2 + self.top_left())
 
     def __update_scale(self, scale: float):
         self.__scale = scale

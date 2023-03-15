@@ -66,8 +66,8 @@ class PascalVocWriter:
         width = SubElement(size_part, 'width')
         height = SubElement(size_part, 'height')
         depth = SubElement(size_part, 'depth')
-        width.text = str(self.img_size[1])
-        height.text = str(self.img_size[0])
+        width.text = str(self.img_size[0])
+        height.text = str(self.img_size[1])
         if len(self.img_size) == 3:
             depth.text = str(self.img_size[2])
         else:

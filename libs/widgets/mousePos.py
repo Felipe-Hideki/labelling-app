@@ -6,7 +6,7 @@ from PyQt5.QtCore import QTimer, QSize
 
 from libs.Canvas import CanvasWin
 from libs.Standalones.Vector import Vector2Int
-from libs.Handlers.Keyboard.KeyHandler import KeyHandler as keyboard
+from libs.handlers.Keyboard.KeyHandler import KeyHandler as keyboard
 
 class MousePos(QWidget):
     def __init__(self):

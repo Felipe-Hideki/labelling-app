@@ -9,7 +9,7 @@ from libs.widgets.ShapePoints import ShapePoints
 from libs.standalones.Vector import Vector2Int
 from libs.widgets.EditWidget import EditWidget
 from libs.standalones.Files_Manager import Files_Manager
-from libs.standalones.pascal_voc_io import PascalVocReader
+from libs.standalones.pascal_voc_io import PascalVocReader, PascalVocWriter
 from libs.canvas.Shape import Shape
 from libs.canvas.CanvasHelper import CanvasHelper as helper
 from libs.canvas.CanvasScrollManager import CanvasScrollManager as CanvasScroll
@@ -100,6 +100,8 @@ class CanvasWin(QWidget):
         self.last_mouse_pos = Vector2Int(0, 0) # last mouse position to get the delta
         self.mouse_moved = 0. # the amount of pixels the mouse moved to allow moving the shape
 
+        self.cur_img = -1 # current image index
+
         self.was_selected = False
         self.clicked_shape = None # the shape that was clicked
         self.shape_formation: list[(Shape, Vector2Int)] = [] # the difference between the shape's position and the clicked shape's position
@@ -132,8 +134,8 @@ class CanvasWin(QWidget):
 
         # On file load bind
         files_manager = Files_Manager.instance()
-        files_manager.OnLoadImage.connect(self.load_pixmap)
         files_manager.OnLoadImage.connect(self.load_shapes)
+        files_manager.OnLoadImage.connect(self.load_pixmap)
 
         self.chosing_option = False # The user is chosing an option in the menu?
 
@@ -174,10 +176,23 @@ class CanvasWin(QWidget):
         p.end()
 
     def load_shapes(self, filepath: str):
+        if self.cur_img != -1:
+            last_file = Files_Manager.instance().imgs()[self.cur_img]
+            last_file_name = last_file.split('/')[-1]
+            last_file_folder = last_file.split('/')[-2]
+
+            writer = PascalVocWriter(last_file_folder, last_file_name, 
+                                (self.original_pixmap.size().width(), self.original_pixmap.size().height(), 3), 
+                                local_img_path=last_file)
+            for shape in self.shapes:
+                _min, _max = Vector2Int.get_min_max(shape.get_points())
+                writer.add_bnd_box(_min.x, _min.y, _max.x, _max.y, shape.name)
+            writer.save(last_file.replace("jpg", "xml"))
         reader = PascalVocReader(filepath)
 
         del self.shapes[:]
         self.shapes = reader.get_shapes()
+        self.cur_img = Files_Manager.instance().img_index()
         self.OnChangedShapes.emit(self.shapes)
 
     def load_pixmap(self, path: str) -> None:
