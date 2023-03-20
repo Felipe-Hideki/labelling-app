@@ -74,26 +74,20 @@ def onMain():
         path = os.path.join(os.path.expanduser("~"), "labelling_app")
 
     if os.path.exists(path):
-        ans = input("Folder already exists. Do you want to continue? (y/n): ")
+        ans = input("Folder already exists. Do you want to overwrite? (y/n): ")
         while ans not in ["y", "n"]:
-            ans = input("Folder already exists. Do you want to continue? (y/n): ")
+            ans = input("Folder already exists. Do you want to overwrite? (y/n): ")
             if ans in ["y", "n"]:
                 break
             os.system("clear")
             print("Invalid input. Please enter 'y' or 'n'.")
-            input("press enter to continue...")
-            os.system("clear")
-
-        if ans == "n":
-            exit()
-        elif ans == "y":
+  
+        if ans == "y":
             shutil.rmtree(path)
-
-    # Clone repo
-    print(f"Starting Download at path {path}...")
-    git.Repo.clone_from("https://github.com/Felipe-Hideki/labelling-app.git", path, branch="main")
-
-    print("Download Complete!")
+            # Clone repo
+            print(f"Starting Download at path {path}...")
+            git.Repo.clone_from("https://github.com/Felipe-Hideki/labelling-app.git", path, branch="main")
+            print("Download Complete!")
     print("Installing environment...\n")
 
     # Create output file stream
@@ -116,7 +110,12 @@ def onMain():
     send("conda create -n labelling_app -c conda-forge python=3.11")
     # Wait for process to finish
     while cmd.poll() is None:
+        err = get_stderr()
         out = get_stdout()
+
+        if err != []:
+            print("".join(err))
+
         # Check if output has changed
         if out != []:
             # print output
@@ -128,17 +127,17 @@ def onMain():
                 inp = input()
                 send(inp)
                 if inp == 'n':
-                    break
+                    reset()
             elif list_contains("Proceed ([y]/n)?", out):
                  send(input())
             elif list_contains("$ conda activate labelling_app", out):
                 break
         time.sleep(.3)
 
-    print("\nInstalling dependencies...")
+    print("\nInstalling dependencies... \n")
     # Install dependencies
     send("source ~/anaconda3/etc/profile.d/conda.sh")
-    send(f"cd {path} && conda activate labelling_app && pip install gitPython && pip install -e . \
+    send(f"conda activate labelling_app && pip install gitPython && pip install -e {path} \
         && pip freeze && conda deactivate && echo exit")
 
     while cmd.poll() is None:
@@ -154,6 +153,7 @@ def onMain():
                 break
         time.sleep(.3)
 
+    cmd.terminate()
     output.close()
 
 def Setup():
@@ -168,8 +168,8 @@ def Setup():
                 "labelapp=main.main:main",
             ]
         },
-        requires=[
-            "mouse", "keyboard", "PyQt5", "PyQt5.sip", "gitPython"
+        install_requires=[
+            "mouse", "keyboard", "PyQt5", "PyQt5.sip", "gitPython", "fast_autocomplete"
         ]
     )
 if __name__ == "__main__":
