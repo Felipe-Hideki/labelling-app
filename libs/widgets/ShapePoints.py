@@ -3,8 +3,8 @@ from typing import overload
 
 from PyQt5.QtCore import QPointF
 
-from libs.Vector import Vector2Int
-from libs.Utils import Utils as utils
+from libs.standalones.Vector import Vector2Int
+from libs.standalones.Utils import Utils as utils
 
 TOP_LEFT = 0
 TOP_RIGHT = 1
@@ -31,20 +31,24 @@ class ShapePoints:
             print(f"{type(self.points[index])=}")
             raise(e)
 
+    def copy(self) -> 'ShapePoints':
+        return ShapePoints(self.points)
+
     @staticmethod
     @overload
-    def square(pos: Vector2Int, size=int) -> 'ShapePoints' : ...
+    def square(pos: Vector2Int, size: int) -> 'ShapePoints' : ...
     @overload
     @staticmethod
     def square(min: Vector2Int, max:Vector2Int) -> 'ShapePoints': ...
     @staticmethod
-    def square(*args, **kwargs) -> 'ShapePoints':
+    def square(*args) -> 'ShapePoints':
+        assert len(args) == 2, "ShapePoints.square(): args must be 2"
+        assert utils.is_type(args[0], Vector2Int) and utils.is_type(args[1], Vector2Int, int), \
+            "ShapePoints.square(): args[0] must be Vector2Int and args[1] must be Vector2Int or int"
         vertexes = [None] * 4
-        extracted_args = utils.extract_vals(args, kwargs, ['pos', 'size'], [Vector2Int, int], 2)
-
-        if extracted_args:
-            pos: Vector2Int = Vector2Int(extracted_args[0])
-            size: float = extracted_args[1]
+        if type(args[1]) == int:
+            pos: Vector2Int = Vector2Int(args[0])
+            size: float = args[1]
 
             vertexes[TOP_LEFT] = pos
             vertexes[TOP_RIGHT] = pos + Vector2Int(size, 0)
@@ -52,18 +56,15 @@ class ShapePoints:
             vertexes[BOTTOM_LEFT] = pos + Vector2Int(0, size)
 
             return ShapePoints(vertexes)
-        
-        extracted_args = utils.extract_vals(args, kwargs, ['min', 'max'], [Vector2Int, Vector2Int], 2)
-
-        if extracted_args:
-            min = extracted_args[0]
-            max = extracted_args[1]
+        elif type(args[1]) == Vector2Int:
+            _min = args[0]
+            _max = args[1]
 
             vertexes = [None] * 4
-            vertexes[TOP_LEFT] = Vector2Int(min)
-            vertexes[TOP_RIGHT] = Vector2Int(max.x, min.y)
-            vertexes[BOTTOM_RIGHT] = Vector2Int(max)
-            vertexes[BOTTOM_LEFT] = Vector2Int(min.x, max.y)
+            vertexes[TOP_LEFT] = Vector2Int(_min)
+            vertexes[TOP_RIGHT] = Vector2Int(_max.x, _min.y)
+            vertexes[BOTTOM_RIGHT] = Vector2Int(_max)
+            vertexes[BOTTOM_LEFT] = Vector2Int(_min.x, _max.y)
 
             return ShapePoints(vertexes)
 
@@ -75,6 +76,12 @@ class ShapePoints:
 
     def __len__(self):
         return len(self.points)
+
+    def __iter__(self):
+        return iter(self.points)
+    
+    def __next__(self):
+        return next(self.points)
 
     def __repr__(self) -> str:
         return self.points.__repr__()

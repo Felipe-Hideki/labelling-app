@@ -1,10 +1,10 @@
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import QLine, QPoint, QSize
+from PyQt5.QtCore import QLine, QPoint, QSize, QRect
 from PyQt5.QtGui import QCursor
 
-from libs.Shape import Shape
-from libs.Vector import Vector2Int
-from libs.MyException import InvalidInstantiation
+from libs.canvas.Shape import Shape
+from libs.standalones.Vector import Vector2Int
+from libs.standalones.MyException import InvalidInstantiation
 
 class CanvasHelper:
     """
@@ -13,9 +13,21 @@ class CanvasHelper:
     MIN_DIST_HIGHLIGHT = 8.00
     MIN_DIST_CREATE = 10.00
     MIN_DIST_TO_MOVE = 1.3
+    MAX_ZOOM = 5.00
 
     def __new__(cls: type['CanvasHelper']) -> 'CanvasHelper':
         raise InvalidInstantiation("Tried to instantiate 'CanvasHelper' class, a data only class.")
+
+    @staticmethod
+    def get_rect(min: Vector2Int, max: Vector2Int) -> QRect:
+        """
+        Returns a QRect from a minimum and maximum position.
+
+        Args:
+            min (Vector2Int): The minimum position.
+            max (Vector2Int): The maximum position.
+        """
+        return QRect(min.x, min.y, max.x - min.x, max.y - min.y)
 
     @staticmethod
     def get_formation(center: Shape, shapes: list[Shape]) -> list[(Shape, Vector2Int)]:
@@ -82,23 +94,6 @@ class CanvasHelper:
             size (QSize): The size to get the middle point of.
         """
         return QPoint(int(size.width() / 2), int(size.height() / 2))
-
-    @staticmethod
-    def get_mouse(scale: float = 1, relative: QWidget = None) -> Vector2Int:
-        """
-        Returns the position of the mouse on the canvas, scaled and relative to the 'relative' widget.
-
-        Args:
-            scale (float, optional): The scale of the canvas. Defaults to 1.
-            relative (QWidget, optional): The widget to get the mouse position relative to. Defaults to None. Returns the global position if None.
-        """
-        rawpos = QCursor.pos()
-        if relative:
-            rawpos = relative.mapFromGlobal(QCursor.pos())
-
-        mousepos = Vector2Int(rawpos)
-        mousepos.scale(scale)
-        return mousepos
     
     @staticmethod
     def relative_pos(pos: Vector2Int | QPoint, center: Vector2Int | QPoint) -> Vector2Int:
@@ -127,6 +122,29 @@ class CanvasHelper:
             point (QPoint): The QPoint to invert.
         """
         return QPoint(-point.x(), -point.y())
+
+    @staticmethod
+    def get_within(pos: Vector2Int, shapes: list[Shape]) -> tuple[Shape, tuple[Shape, int]]:
+        found = False
+        selected_shape = None
+
+        min_dist = CanvasHelper.MIN_DIST_HIGHLIGHT+1
+        closest = (None, None)
+
+        for shape in shapes:
+            within = shape.is_within(pos)
+            if within and not shape.selected and not found:
+                found = True
+                selected_shape = shape
+            if within and shape.selected and not found:
+                selected_shape = shape
+            index, dist = shape.closest_vertex(pos, min_dist)
+            if index is not None and dist < min_dist:
+                min_dist = dist
+                closest = (shape, index)
+
+        return selected_shape, closest
+
 
     @staticmethod
     def get_shape_within(pos: Vector2Int, shapes: list[Shape]) -> Shape | None:

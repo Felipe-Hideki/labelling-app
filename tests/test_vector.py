@@ -10,7 +10,7 @@ sys.path.append(parent_dir)
 
 from PyQt5.QtCore import QPoint, QSize, QRect
 
-from libs.Vector import Vector2Int
+from libs.Standalones.Vector import Vector2Int
 
 class TestVector(unittest.TestCase):
     def test_vector_constructor(self):
