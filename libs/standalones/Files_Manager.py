@@ -3,7 +3,7 @@ import os
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import pyqtSignal, QObject
 
-from libs.standalones.Utils import Utils as utils
+from libs.standalones.Utils import utils as utils
 from libs.widgets.MenuBar import MenuBar, actions, fileMenu
 from libs.handlers.keyboard.KeyHandler import KeyHandler, ActionBind
 from libs.standalones.PersistentData import PersistentData, PersistentDataType
@@ -18,13 +18,13 @@ class Files_Manager(QObject):
     def instance(cls):
         return Files_Manager.__instance
 
-    def __init__(self):
+    def __init__(self, parent=None):
         assert Files_Manager.__instance is None, "Files_Manager is a singleton class, use Files_Manager.instance() instead"
-        super().__init__()
+        super().__init__(parent=parent)
         self.__images = []
         self.__cur_img = -1
         self.__folder_size = 0
-        self.window = None
+        self.window = parent
 
         MenuBar.instance().actions_dict[actions.file][fileMenu.open].triggered.connect(self.open_folder)
 
