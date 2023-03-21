@@ -1,11 +1,13 @@
 venv/
 .*
 __pycache__
+*.txt
 *.prof
 *.png
 *.json
 stats
 *.stg
 *.xml
+*.egg-info
 !default*.json
 !.gitignore
