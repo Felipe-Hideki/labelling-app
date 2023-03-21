@@ -41,7 +41,6 @@ class KeyHandler:
     def __init__(self, mainWindow: QMainWindow) -> None: ...
 
     def __load(self, mainWindow: QMainWindow) -> None:
-        self.__keys_pressed: Key = Key()
         self.__changed_key = ""
         self.__mainWindow = mainWindow
         self.lost_focus = False
@@ -81,45 +80,55 @@ class KeyHandler:
 
     def __hook(self, event: keyboard.KeyboardEvent) -> None:
         
-        self.__changed_key = event.name
-
         if event.event_type == keyboard.KEY_DOWN:
-            self.__keys_pressed.set_key(self.__changed_key)
             self.__on_key_press(event)
         elif event.event_type == keyboard.KEY_UP:
             self.__on_key_up(event)
-            if not self.lost_focus:
-                self.__keys_pressed.rem_key(self.__changed_key)
         
         self.lost_focus = False
 
     def __on_key_press(self, event: keyboard.KeyboardEvent) -> None:
         if not self.__mainWindow.isActiveWindow():
             return
+        
+        keys_pressed = ""
+
+        for mod in event.modifiers:
+            keys_pressed += f'{mod}+'
+        keys_pressed += event.name
+
         for bind_details in self.__binds.values():
             if bind_details.state_type == KeyStates.KEY_CHANGE and not bind_details.state \
-                    and bind_details.key == self.__keys_pressed and not keyboard.is_modifier(self.__changed_key):
+                    and keys_pressed == bind_details.key:
                 self.__broadcast(bind_details.runnable)
                 bind_details.state = True
                 continue
 
             if bind_details.state_type == KeyStates.KEY_DOWN and not bind_details.state \
-                    and bind_details.key == self.__keys_pressed and not keyboard.is_modifier(self.__changed_key):
+                    and keys_pressed == bind_details.key:
                 self.__broadcast(bind_details.runnable)
                 bind_details.state = True
 
     def __on_key_up(self, event: keyboard.KeyboardEvent) -> None:
-        if not self.__mainWindow.isActiveWindow():
-            return
+        keys_pressed = ""
+        removed = event.name
+
+        for mod in event.modifiers:
+            keys_pressed += f'{mod}+'
+        if not keyboard.is_modifier(removed):
+            keys_pressed += removed
+        else:
+            keys_pressed = keys_pressed.removesuffix("+")
+
         for bind_details in self.__binds.values():
             if bind_details.state_type == KeyStates.KEY_CHANGE and bind_details.state \
-                    and bind_details.key == self.__keys_pressed:
+                    and (bind_details.key == keys_pressed or removed in bind_details.key):
                 self.__broadcast(bind_details.runnable)
                 bind_details.state = False
                 continue
 
             if (bind_details.state_type == KeyStates.KEY_UP or (bind_details.toggle and bind_details.state)) \
-                    and bind_details.key == self.__keys_pressed:
+                    and (bind_details.key == keys_pressed or removed in bind_details.key):
                 self.__broadcast(bind_details.runnable)
                 bind_details.state = False
             if bind_details.state and self.__changed_key in bind_details.key:
