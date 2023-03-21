@@ -4,12 +4,7 @@ from typing import overload
 from PyQt5.QtCore import QPointF
 
 from libs.standalones.Vector import Vector2Int
-from libs.standalones.Utils import Utils as utils
-
-TOP_LEFT = 0
-TOP_RIGHT = 1
-BOTTOM_RIGHT = 2
-BOTTOM_LEFT = 3
+from libs.standalones.Utils import utils as utils
 
 @dataclass
 class ShapePoints:
@@ -43,28 +38,31 @@ class ShapePoints:
     @staticmethod
     def square(*args) -> 'ShapePoints':
         assert len(args) == 2, "ShapePoints.square(): args must be 2"
-        assert utils.is_type(args[0], Vector2Int) and utils.is_type(args[1], Vector2Int, int), \
-            "ShapePoints.square(): args[0] must be Vector2Int and args[1] must be Vector2Int or int"
         vertexes = [None] * 4
         if type(args[1]) == int:
             pos: Vector2Int = Vector2Int(args[0])
             size: float = args[1]
 
-            vertexes[TOP_LEFT] = pos
-            vertexes[TOP_RIGHT] = pos + Vector2Int(size, 0)
-            vertexes[BOTTOM_RIGHT] = pos + (Vector2Int.one() * size)
-            vertexes[BOTTOM_LEFT] = pos + Vector2Int(0, size)
+            # Order of vertexes:
+            # TOP_LEFT, TOP_RIGHT, BOT_RIGHT, BOT_LEFT
+
+            vertexes[0] = pos
+            vertexes[1] = pos + Vector2Int(size, 0)
+            vertexes[2] = pos + (Vector2Int.one() * size)
+            vertexes[3] = pos + Vector2Int(0, size)
 
             return ShapePoints(vertexes)
         elif type(args[1]) == Vector2Int:
             _min = args[0]
             _max = args[1]
 
-            vertexes = [None] * 4
-            vertexes[TOP_LEFT] = Vector2Int(_min)
-            vertexes[TOP_RIGHT] = Vector2Int(_max.x, _min.y)
-            vertexes[BOTTOM_RIGHT] = Vector2Int(_max)
-            vertexes[BOTTOM_LEFT] = Vector2Int(_min.x, _max.y)
+            # Order of vertexes:
+            # TOP_LEFT, TOP_RIGHT, BOT_RIGHT, BOT_LEFT
+            
+            vertexes[0] = Vector2Int(_min)
+            vertexes[1] = Vector2Int(_max.x, _min.y)
+            vertexes[2] = Vector2Int(_max)
+            vertexes[3] = Vector2Int(_min.x, _max.y)
 
             return ShapePoints(vertexes)
 
