@@ -2,25 +2,21 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 from libs.widgets.ShapePoints import ShapePoints
-from libs.standalones.Vector import Vector2Int, Vector2
-from libs.standalones.MyException import ShapeNoPointsException, InvalidVertexException
-from libs.canvas.CoordinatesSystem import Position, TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT
-from libs.standalones.Utils import Utils
+from libs.standalones.Vector import Vector2Int
+from libs.standalones.MyException import InvalidVertexException
+from libs.standalones.Utils import utils
 
     
 class Shape:
-    DEFAULT_LINE_COLOR = QColor(255, 255, 255, 255)
-    DEFAULT_VERTEX_COLOR = QColor(124, 252, 0, 255)
+    #DEFAULT_VERTEX_COLOR = QColor(124, 252, 0, 255)
     DEFAULT_HIGHLIGHT_COLOR = QColor(242, 0, 0, 255)
     DEFAULT_SELECTED_COLOR = QColor(0, 60, 255, 100)
-    DEFAULT_FILL_COLOR = QColor(100, 100, 100, 100)
-    DEFAULT_FILL_PATTERN_COLOR = QColor(100, 100, 100, 150)
     DEFAULT_FILL_PATTERN = Qt.BDiagPattern
 
     VERTEX_SIZE = 4
     VERTEX_HIGHLIGHT_GROWTH = 3
 
-    PEN_SIZE = 1
+    PEN_SIZE = 2
     
     def __init__(self, name: str, points: ShapePoints) -> None:
         assert points is not None, "Shape.__init__(): points must not be None"
@@ -31,13 +27,17 @@ class Shape:
         self.fill = False
         self.selected = False
 
-        self.lines_color = Shape.DEFAULT_LINE_COLOR
-        self.vertex_color = Shape.DEFAULT_VERTEX_COLOR
+        generated_color = utils.generate_color_by_text(self.name)
+        generated_color.setAlpha(255)
+
+        self.lines_color = QColor(generated_color)
+        self.vertex_color = QColor(generated_color)
         self.highlighted_color = Shape.DEFAULT_HIGHLIGHT_COLOR
         self.selected_color = Shape.DEFAULT_SELECTED_COLOR
-        self.fill_color = Shape.DEFAULT_FILL_COLOR
+        self.fill_color = QColor(generated_color)
         self.fill_pattern = Shape.DEFAULT_FILL_PATTERN
-        self.fill_pattern_color = Shape.DEFAULT_FILL_PATTERN_COLOR
+        generated_color.setAlpha(100)
+        self.fill_pattern_color = QColor(generated_color)
 
         _min, _max = Vector2Int.get_min_max(self.__points)
         self.__size = QSize(_max.x - _min.x, _max.y - _min.y)
@@ -51,10 +51,10 @@ class Shape:
         return self.__points.copy()
 
     def top_left(self) -> Vector2Int:
-        return self.__points[TOP_LEFT]
+        return self.__points[0]
     
     def bot_right(self) -> Vector2Int:
-        return self.__points[BOTTOM_RIGHT]
+        return self.__points[2]
 
     def width(self) -> int:
         return self.__size.width()
@@ -112,36 +112,36 @@ class Shape:
         move_to.y = max(move_to.y, 0)
 
         # Update the position of the shape's points
-        self.__points[TOP_LEFT] = move_to
-        self.__points[TOP_RIGHT] = Vector2Int(move_to.x + shape_size.width(), move_to.y)
-        self.__points[BOTTOM_RIGHT] = move_to + shape_size
-        self.__points[BOTTOM_LEFT] = Vector2Int(move_to.x, move_to.y + shape_size.height())
+        self.__points[0] = move_to
+        self.__points[1] = Vector2Int(move_to.x + shape_size.width(), move_to.y)
+        self.__points[2] = move_to + shape_size
+        self.__points[3] = Vector2Int(move_to.x, move_to.y + shape_size.height())
 
         self.__update()
 
     def unfill(self) -> None:
         self.fill = False
 
-    def move_vertex(self, to: Vector2Int, index: Position | int) -> None:
+    def move_vertex(self, to: Vector2Int, index: int) -> None:
         assert to is not None and index is not None, "Shape.move_vertex(): to and index must not be None"
 
         match(index):
-            case Position.TOP_LEFT:
-                self.__points[TOP_LEFT] = Vector2Int(to)
-                self.__points[TOP_RIGHT] = Vector2Int(self.__points[TOP_RIGHT].x, to.y)
-                self.__points[BOTTOM_LEFT] = Vector2Int(to.x, self.__points[BOTTOM_LEFT].y)
-            case Position.TOP_RIGHT:
-                self.__points[TOP_RIGHT] = Vector2Int(to)
-                self.__points[BOTTOM_RIGHT] = Vector2Int(to.x, self.__points[BOTTOM_RIGHT].y)
-                self.__points[TOP_LEFT] = Vector2Int(self.__points[TOP_LEFT].x, to.y)
-            case Position.BOTTOM_RIGHT:
-                self.__points[BOTTOM_RIGHT] = Vector2Int(to)
-                self.__points[BOTTOM_LEFT] = Vector2Int(self.__points[BOTTOM_LEFT].x, to.y)
-                self.__points[TOP_RIGHT] = Vector2Int(to.x, self.__points[TOP_RIGHT].y)
-            case Position.BOTTOM_LEFT:
-                self.__points[BOTTOM_LEFT] = Vector2Int(to)
-                self.__points[TOP_LEFT] = Vector2Int(to.x, self.__points[TOP_LEFT].y)
-                self.__points[BOTTOM_RIGHT] = Vector2Int(self.__points[BOTTOM_RIGHT].x, to.y)
+            case 0:
+                self.__points[0] = Vector2Int(to)
+                self.__points[1] = Vector2Int(self.__points[1].x, to.y)
+                self.__points[3] = Vector2Int(to.x, self.__points[3].y)
+            case 1:
+                self.__points[1] = Vector2Int(to)
+                self.__points[2] = Vector2Int(to.x, self.__points[2].y)
+                self.__points[0] = Vector2Int(self.__points[0].x, to.y)
+            case 2:
+                self.__points[2] = Vector2Int(to)
+                self.__points[3] = Vector2Int(self.__points[3].x, to.y)
+                self.__points[1] = Vector2Int(to.x, self.__points[1].y)
+            case 3:
+                self.__points[3] = Vector2Int(to)
+                self.__points[0] = Vector2Int(to.x, self.__points[0].y)
+                self.__points[2] = Vector2Int(self.__points[2].x, to.y)
             case _:
                 raise(InvalidVertexException(f"Tried to move vertex with index: {int(index)}"))
 
@@ -169,8 +169,8 @@ class Shape:
     def __vertex_size(self, increase: bool = False) -> int:
         scale = self.__scale if self.__scale >= 1 else self.__scale+abs(self.__scale - 1)
         if not increase:
-            return int(self.VERTEX_SIZE * scale)
-        return int((self.VERTEX_SIZE + self.VERTEX_HIGHLIGHT_GROWTH) * self.__scale)
+            return int(Shape.VERTEX_SIZE * scale)
+        return int((Shape.VERTEX_SIZE + Shape.VERTEX_HIGHLIGHT_GROWTH) * self.__scale)
 
     def __draw_square(self, painter: QPainter, scale: float):
 
@@ -179,7 +179,7 @@ class Shape:
         elif self.fill:
             painter.setBrush(QBrush(self.fill_pattern_color, self.fill_pattern))
         else:
-            painter.setBrush(Utils.Empty_Brush)
+            painter.setBrush(utils.Empty_Brush)
 
         if self.get_highlighted_vertex() is not None:
             painter.setPen(self.__get_pen(scale, self.highlighted_color))
