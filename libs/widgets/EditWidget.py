@@ -1,6 +1,6 @@
 from fast_autocomplete import AutoComplete
 
-from PyQt5.QtWidgets import QWidget, QLineEdit, QListWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QListWidgetItem
+from PyQt5.QtWidgets import QWidget, QLineEdit, QListWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QListWidgetItem, QApplication
 from PyQt5.QtCore import QEventLoop, Qt
 from PyQt5.QtGui import QKeyEvent, QCloseEvent, QCursor, QFocusEvent
 
@@ -60,6 +60,7 @@ class EditWidget(QWidget):
     def get_name(self, default: str="", title_name: str="labelling") -> str:
         self.setWindowTitle(title_name)
         self.input.setText(default)
+        QApplication.setOverrideCursor(Qt.ArrowCursor)
         self.show()
         self.loop.exec()
         self.clearFocus()

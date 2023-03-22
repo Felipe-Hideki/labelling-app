@@ -13,3 +13,4 @@ Project made specifically for learning python and get familiar with github.
 - Add support for windows users
 - Optmize keyboard key handling
 - Add way for finding specific labels, and files
+- Comment everything

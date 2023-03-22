@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from math import sqrt, floor
 from typing import overload, Union
 
-from libs.standalones.Utils import Utils as utils
+from libs.standalones.Utils import utils as utils
 
 @dataclass
 class Vector2:
@@ -28,8 +28,6 @@ class Vector2:
             self.x = 0
             self.y = 0
         elif args_size == 2:
-            assert utils.is_type(args[0], int, float) and utils.is_type(args[0], int, float), \
-                "Vector2Int.__init__(): args[0] and args[1] must be int or float"
             self.x = float(args[0])
             self.y = float(args[1])
         elif args_size == 1 and type(args[0]) == QSize:
@@ -265,8 +263,6 @@ class Vector2Int:
             self.x = 0
             self.y = 0
         elif args_size == 2:
-            assert utils.is_type(args[0], int, float) and utils.is_type(args[0], int, float), \
-                "Vector2Int.__init__(): args[0] and args[1] must be int or float"
             self.x = args[0]
             self.y = args[1]
         elif args_size == 1 and type(args[0]) == QSize:

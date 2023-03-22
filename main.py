@@ -35,16 +35,13 @@ class MainWindow(QMainWindow):
         MouseManager()
 
         self.setWindowTitle(__appname__)
+        # Menu bar
+        self.setMenuBar(MenuBar(self))
+
         # Standalones
         self.keyHandler = KeyHandler(self)
         self.__settings = PersistentData()
-        self.files_manager = Files_Manager()
-
-        # Menu bar
-        self.setMenuBar(MenuBar.instance())
-
-        # Setting up files_manager
-        self.files_manager.window = self
+        self.files_manager = Files_Manager(self)
 
         # Main widget
         self.mainWidget = MainWindowManager(parent=self)

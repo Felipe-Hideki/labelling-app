@@ -2,7 +2,7 @@ from typing import overload
 from time import time
 
 from PyQt5.QtCore import Qt, QSize, QRect, pyqtSignal, pyqtSlot, QPoint
-from PyQt5.QtWidgets import QWidget, QSizePolicy, QMenu, QAction
+from PyQt5.QtWidgets import QWidget, QSizePolicy, QMenu, QAction, QApplication
 from PyQt5.QtGui import QColor, QPalette, QPainter, QPaintEvent, QMouseEvent, QWheelEvent, QPixmap, QImage, QPen, QResizeEvent, QBrush
 
 from libs.widgets.ShapePoints import ShapePoints
@@ -156,7 +156,7 @@ class CanvasWin(QWidget):
     def paintEvent(self, a0: QPaintEvent) -> None:
         p = self._painter
         p.begin(self)
-        #p.setRenderHint(QPainter.Antialiasing)
+        p.setRenderHint(QPainter.Antialiasing)
 
         p.drawPixmap(self.rect_to_draw, self.resized_pixmap)
         
@@ -294,6 +294,34 @@ class CanvasWin(QWidget):
         size = QSize(parent_size.width(), parent_size.height())
         return size
 
+    def set_state(self, state: int) -> None:
+        '''
+            Sets the state of the canvas
+
+            Args:
+                state: The new state of the canvas
+        '''
+        self.state = state
+        self.update_cursor()
+
+    def update_cursor(self) -> None:
+        '''
+            Sets the cursor of the canvas
+        '''
+        if not self.hasFocus():
+            return
+        if self.state == CREATE:
+            QApplication.setOverrideCursor(Qt.CrossCursor)
+        elif self.state == MOVE and self.left_pressed:
+            QApplication.setOverrideCursor(Qt.ClosedHandCursor)
+        elif self.state == MOVE:
+            QApplication.setOverrideCursor(Qt.OpenHandCursor)
+        elif self.state == MOVING_SHAPE or self.state == MOVING_VERTEX \
+            or self.state == COPY:
+            QApplication.setOverrideCursor(Qt.BlankCursor)
+        else:
+            QApplication.setOverrideCursor(Qt.ArrowCursor)
+
     def set_scale(self, val: float) -> None:
         '''
             Sets the scale of the canvas.
@@ -338,8 +366,7 @@ class CanvasWin(QWidget):
         '''
             Sets the canvas to move mode.
         '''
-        self.state = MOVE if self.state != MOVE else EDIT
-        self.update()
+        self.set_state(MOVE if self.state != MOVE else EDIT)
 
     def edit_label_slot(self):
         self.OnBeginEdit.emit()
@@ -358,8 +385,7 @@ class CanvasWin(QWidget):
         '''
             Sets the canvas to create mode.
         '''
-        self.state = CREATE
-        self.update()
+        self.set_state(CREATE)
 
     def create(self) -> None:
         '''
@@ -372,7 +398,7 @@ class CanvasWin(QWidget):
 
         if Vector2Int.distance(mousepos, self.creating_pos) < helper.MIN_DIST_CREATE:
             self.creating_pos = None
-            self.state = EDIT
+            self.set_state(EDIT)
             self.update()
             return
         
@@ -394,7 +420,7 @@ class CanvasWin(QWidget):
 
             self.add_shape(shape)
         self.creating_pos = None
-        self.state = EDIT
+        self.set_state(EDIT)
         self.update()
 
     def _create_copy(self) -> None:
@@ -404,7 +430,7 @@ class CanvasWin(QWidget):
         self.add_shape(self.shape_copy)
         self.select(self.shape_copy, True, False)
         self.shape_copy = None
-        self.state = EDIT
+        self.set_state(EDIT)
 
     def delete(self) -> None:
         '''
@@ -539,9 +565,10 @@ class CanvasWin(QWidget):
         # IF MOVING
         if self.state == MOVE and self.left_pressed:
             delta = self.get_mouse() - self.last_mouse_pos
-            self.viewport.move_by(-delta * self.move_sensitivity * self.scale)
+            self.viewport.move_by(-delta * self.move_sensitivity * min(self.scale, 1))
             self.update()
             self.last_mouse_pos = self.get_mouse()
+            self.update_cursor()
             return
 
         # IF COPYING
@@ -560,6 +587,7 @@ class CanvasWin(QWidget):
 
             self.selected_shapes[0].move_vertex(mousePos, self.highlighted_vertex[1])
             self.update()
+            self.update_cursor()
             return
 
         # IF MOVING SHAPE
@@ -569,6 +597,7 @@ class CanvasWin(QWidget):
             mousePos -= self.mouse_offset
             helper.move_shapes(mousePos, self.clicked_shape, self.shape_formation, Vector2Int(self.original_pixmap.size()))
             self.update()
+            self.update_cursor()
             return
 
         self.mouse_moved += Vector2Int.distance(mousePos, (self.last_mouse_pos- self.pixmap_rel_pos()) / self.scale)
@@ -611,7 +640,7 @@ class CanvasWin(QWidget):
             closest_shape = helper.get_shape_within(mousePos, self.shapes)
             if closest_shape is not None:
                 self.shape_copy = closest_shape.copy()
-                self.state = COPY
+                self.set_state(COPY)
                 self.mouse_offset = mousePos - closest_shape.top_left()
                 self.mouse_moved = 0
                 self.deselect_all()
@@ -619,7 +648,7 @@ class CanvasWin(QWidget):
                 self.select(self.shape_copy, True, True)
 
         if a0.button() == Qt.LeftButton and self.state == COPY:
-            self.state = EDIT
+            self.set_state(EDIT)
             self.mouse_offset = Vector2Int()
             self.mouse_moved = 0
             self.deselect_all()
@@ -648,7 +677,7 @@ class CanvasWin(QWidget):
             self.select(closest_shape, True)
             #Start moving vertex
 
-            self.state = MOVING_VERTEX
+            self.set_state(MOVING_VERTEX)
             closest_shape.highlighted_vertex = vertex_index
 
             closest_shape.move_vertex(mousePos, closest_shape.highlighted_vertex)
@@ -664,7 +693,7 @@ class CanvasWin(QWidget):
             self.mouse_offset = mousePos - closest_shape.top_left()
             self.clicked_shape = closest_shape
 
-            self.state = MOVING_SHAPE
+            self.set_state(MOVING_SHAPE)
 
             self.shape_formation.clear()
             self.shape_formation = helper.get_formation(self.clicked_shape, self.selected_shapes)
@@ -680,7 +709,7 @@ class CanvasWin(QWidget):
             if self.mouse_moved <= helper.MIN_DIST_TO_MOVE:
                 self.chosing_option = True
                 if self.rclick_menu.exec_(self.mapToGlobal(a0.pos())) is None:
-                    self.state = EDIT
+                    self.set_state(EDIT)
                     self.mouse_offset = Vector2Int()
                     self.mouse_moved = 0
                     self.deselect_all()
@@ -691,6 +720,8 @@ class CanvasWin(QWidget):
         
         self.left_pressed = False
 
+        self.update_cursor()
+
         if self.state == CREATE:
             self.create()
 
@@ -699,7 +730,7 @@ class CanvasWin(QWidget):
             self.deselect(self.clicked_shape)
 
         if self.state == MOVING_VERTEX or self.state == MOVING_SHAPE:
-            self.state = EDIT
+            self.set_state(EDIT)
             self.clicked_shape = None
             shape = helper.get_shape_within(self.get_mouse_relative(), self.shapes)
             self.auto_fill_shape(shape)
