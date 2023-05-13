@@ -1,5 +1,6 @@
 from typing import overload
 from time import time
+from threading import Lock
 
 from PyQt5.QtCore import Qt, QSize, QRect, pyqtSignal, pyqtSlot, QPoint
 from PyQt5.QtWidgets import QWidget, QSizePolicy, QMenu, QAction, QApplication
@@ -85,6 +86,9 @@ class CanvasWin(QWidget):
         self.h_shapes: list[Shape] = [] # highlighted shape
         self.state = EDIT # current state of the canvas
         self.multi_select = False # if the user is selecting multiple shapes
+
+        self.multi_select_lock = Lock() # lock for the multi select mode
+        self.state_lock = Lock() # lock for the state
 
         self.selected_shapes: list[Shape] = [] # selected shapes
         self.highlighted_vertex: tuple[Shape, int] = (None, None)
@@ -301,8 +305,10 @@ class CanvasWin(QWidget):
             Args:
                 state: The new state of the canvas
         '''
+        self.state_lock.acquire()
         self.state = state
         self.update_cursor()
+        self.state_lock.release()
 
     def update_cursor(self) -> None:
         '''
@@ -353,7 +359,10 @@ class CanvasWin(QWidget):
         '''
             Toggles multi select mode.
         '''
+        self.multi_select_lock.acquire()
+        print(f"Multi select mode: {self.multi_select}")
         self.multi_select = not self.multi_select
+        self.multi_select_lock.release()
 
     def mouse_out_of_bounds(self) -> bool:
         '''
