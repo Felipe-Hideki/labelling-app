@@ -3,10 +3,19 @@ import shutil
 import setuptools
 import subprocess
 import os
-import git
+import platform
 import time
 import io
 import select
+import stat
+
+try:
+    import git
+except ImportError:
+    print("GitPython not found. trying to install...")
+    os.system("pip install gitPython")
+    import git
+
 from threading import Thread
 from queue import Queue, Empty
 
@@ -19,12 +28,32 @@ python_version = "3.11.2"
 project_name = "labelapp"
 
 
-def get_conda_path():
+if platform.system() == "Windows":
+    def start_terminal(stdout, sterr, stdin) -> subprocess.Popen:
+        return subprocess.Popen(["cmd"], stdout=stdout, stderr=sterr, stdin=stdin)
+    def clear():
+        os.system("cls")
+    def get_pip_path(env_path: str) -> str:
+        return os.path.join(env_path, "Scripts", "pip")
+        
+else:
+    def start_terminal(stdout, sterr, stdin) -> subprocess.Popen:
+        return subprocess.Popen(["bash"], stdout=stdout, stderr=sterr, stdin=stdin)
+    def clear():
+        os.system("clear")
+    def get_pip_path(env_path: str) -> str:
+        return os.path.join(env_path, "bin", "pip")
+
+def get_conda_path() -> str:
     global cmd, output, error
-    send("conda info --base")
-    while (out := get_stdout()) == []:
+    send("conda info --base > conda_path.txt && echo done")
+    while not list_contains("done", (out := get_stdout())):
         time.sleep(.3)
-    return out[0].replace("\n", "")
+    with open("conda_path.txt", 'r') as f:
+        f.seek(0)
+        path = f.readlines()[0].strip('\n')
+    os.remove("conda_path.txt")
+    return path
 
 def list_contains(string: str, lines: list) -> bool:
     for line in lines:
@@ -37,6 +66,10 @@ def reset_stream(stream: io.TextIOWrapper):
     stream.truncate(0)
     stream.write('')
 
+def remove_readonly(func, path, excinfo):
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
 def get_lines(file: io.TextIOWrapper, prefix: str) -> list[str]:
     global log
     file.seek(0)
@@ -45,12 +78,16 @@ def get_lines(file: io.TextIOWrapper, prefix: str) -> list[str]:
 
     index = 0
     while index < len(lines):
-        if lines[index] == '' or lines[index] == '\n':
+        if lines[index] == '' or lines[index] == '\n' or \
+                lines[index].startswith(os.getcwd().split('\\')[0]) or \
+                lines[index].startswith(f"({project_name})"):
             lines.pop(index)
             continue
         index += 1
 
     if lines != []:
+        if lines[-1][-1] != '\n':
+            lines[-1] += '\n'
         log.write(prefix+''.join(lines))
         log.flush()
     return lines
@@ -72,9 +109,8 @@ def reset():
     global cmd, output, error
     reset_stream(output)
     reset_stream(error)
-    cmd.stdin.write(('exit\n').encode('utf-8'))
-    cmd.stdin.flush()
-    cmd = subprocess.Popen(["bash"], stdout=output, stderr=error, stdin=subprocess.PIPE)
+    cmd.terminate()
+    cmd = start_terminal(output, error, subprocess.PIPE)
 
 def close_cmd():
     global cmd, output, error, log
@@ -104,7 +140,7 @@ def ask_for_branch(at: str) -> str:
     
     branch = input("Which branch do you want to install? (default: main): ")
     while branch not in [str(i) for i in range(len(branches))] and branch != "":
-        os.system("clear")
+        clear()
         branch = input("Invalid branch. Please enter a valid branch: ")
         branch = input("Which branch do you want to install? (default: main): ")
 
@@ -145,11 +181,12 @@ def onMain():
             ans = input("Folder already exists. Do you want to overwrite? (y/n): ")
             if ans in ["y", "n"]:
                 break
-            os.system("clear")
+            clear()
             print("Invalid input. Please enter 'y' or 'n'.")
   
         if ans == "y":
-            shutil.rmtree(path)
+            shutil.rmtree(path, onerror=remove_readonly)
+            print("Deleted folder Successfully.")
             change_branch(ask_for_branch(path), path)
     else:
         change_branch(ask_for_branch(path), path)
@@ -166,7 +203,9 @@ def onMain():
 
     out = []
 
-    cmd = subprocess.Popen(["bash"], stdout=output, stderr=error, stdin=subprocess.PIPE)
+    cmd = start_terminal(output, error, subprocess.PIPE)
+    time.sleep(.2)
+    get_stdout()
 
     send(f"conda create -n {project_name} -c conda-forge python={python_version}")
     # Wait for process to finish
@@ -184,31 +223,34 @@ def onMain():
         if out != []:
             # print output
             [print(line, end="") for line in out]
-            log.write(''.join(out)+"\n")
+            #log.write(''.join(out)+"\n")
             # Check if conda env already exists
             if list_contains("conda environment already exists", out):
                 # write_to_process(process, (input() + '\n').encode('utf-8'))
-                inp = input()
-                send(inp)
+                send(input())
+            elif list_contains("WARNING: A directory already exists at the target location", out):
+                send(input())
             elif list_contains("Proceed ([y]/n)?", out):
-                 send(input())
+                send(input())
             elif list_contains(f"$ conda activate {project_name}", out):
                 break
         time.sleep(.3)
 
     conda_path = get_conda_path()
-    env_path = os.path.join(conda_path, f"envs/{project_name}")
-    pip_path = os.path.join(env_path, "bin/pip3")
+    env_path = os.path.join(conda_path,"envs", project_name)
+    pip_path = get_pip_path(env_path)
 
-    send(f"source {conda_path}/etc/profile.d/conda.sh && conda activate {project_name}")
+    if platform.system() == "Windows":
+        send(f"{conda_path}/Scripts/activate && conda activate {project_name}")
+    else:
+        send(f"source {conda_path}/etc/profile.d/conda.sh && conda activate {project_name}")
+    send(f"conda install pip -y")
     send("echo done")
     while (out := get_stdout()) == []:
         if list_contains("done", get_stderr()):
             break
         time.sleep(.3)
 
-    send("which pip")
-    time.sleep(5)
 
     print("\nInstalling dependencies... \n")
     # Install dependencies
@@ -219,15 +261,20 @@ def onMain():
     with open(os.path.join(path, 'environment.path'), 'w') as f:
         f.write(env_path)
     #send("source ~/anaconda3/etc/profile.d/conda.sh")
-    send(f"{pip_path} install gitPython && {pip_path} install -e {path} \
+    if platform.system() == "Windows":
+        send(f"{pip_path} install gitPython && {pip_path} install -e {path} \
         && {pip_path} install -r {os.path.join(path, 'requirements.txt')} && conda deactivate \
-        && echo 'Installation complete. You can now run the app by typing 'sudo labelapp' in your terminal with the conda enviroment active.'")
+        && echo 'Installation complete. You can now run the app by typing 'labelapp' in your terminal with the conda enviroment active.'")
+    else:
+        send(f"{pip_path} install gitPython && {pip_path} install -e {path} \
+            && {pip_path} install -r {os.path.join(path, 'requirements.txt')} && conda deactivate \
+            && echo 'Installation complete. You can now run the app by typing 'sudo labelapp' in your terminal with the conda enviroment active.'")
 
     while cmd.poll() is None:
         out = get_stdout()
         err = get_stderr()
         if err != []:
-            if not list_contains("notice", err):
+            if not list_contains("notice", err) and not list_contains("WARNING", err):
                 print("Installation failed. Please check the log file for more information.")
                 close_cmd()
                 exit()
@@ -258,7 +305,11 @@ def Setup():
     )
 if __name__ == "__main__":
     if sys.argv and len(sys.argv) > 0 and sys.argv[1] == "install":
-        onMain()
+        try:
+            onMain()
+        except Exception as e:
+            if cmd:
+                close_cmd()
         input("Press any key to exit...")
         exit()
     Setup()
