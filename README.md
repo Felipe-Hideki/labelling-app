@@ -8,7 +8,7 @@ Project made specifically for learning python and get familiar with github.
 
 # Currently working on
 - Add a preferences tab that customizes variables like sensibility, default colors, keybinds
-- Add name of shape above it, so that is easier to spot misspell
+- Add name of shape above it, so that is easier to spot misspelling
 - Add a counter for the total images
 - Add support for windows users
 - Optmize keyboard key handling
