@@ -1,6 +1,6 @@
 # labelling-app
 
-A labelling program for ai training, took heavy inspirantion from [labelImg](https://github.com/heartexlabs/labelImg).
+A labelling program for ai training, took heavy inspiration from [labelImg](https://github.com/heartexlabs/labelImg).
 
 Project made specifically for learning python and get familiar with github.
 
