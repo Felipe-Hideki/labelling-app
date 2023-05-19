@@ -71,8 +71,8 @@ class Key:
     def __eq__(self, other: Union['Key', str]) -> bool:
         if isinstance(other, Key):
             return self.get_formatted() == other.get_formatted()
-        if isinstance(other, str):
-            return self.get_formatted() == normalize_name(other)
+        if isinstance(other, str) or isinstance(other, list):
+            return self.get_formatted() == keyboard.get_hotkey_name(other)
     
     def __str__(self) -> str:
         return self._formatted_key

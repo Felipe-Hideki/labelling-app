@@ -128,19 +128,19 @@ class PascalVocReader:
     def __init__(self, file_path: str):
         if file_path.endswith(JPG_EXT):
             file_path = file_path.replace(JPG_EXT, XML_EXT)
-        if not os.path.exists(file_path):
-            return
         self.shapes: list[Shape] = []
         self.file_path = file_path
         self.verified = False
 
+        if not os.path.exists(file_path):
+            return
         try:
             self.parse_xml()
         except:
             pass
 
     def get_shapes(self):
-        return self.shapes
+        return [shape.copy() for shape in self.shapes] if self.shapes else []
 
     def get_labels(self):
         return self.box_quantity

@@ -9,5 +9,4 @@ stats
 *.stg
 *.xml
 *.egg-info
-!default*.json
-!.gitignore
+Settings/*
