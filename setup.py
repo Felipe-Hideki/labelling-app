@@ -169,14 +169,22 @@ def onMain():
 
     # Get path to install
     path = input(f"Where do you want to install the app? (default: ~/{project_name}): ")
-    while(not os.path.exists('/'.join(path.split('/')[:-1])) and path != ""):
-        print("Invalid path. Please enter a valid path.")
-        path = input(f"Where do you want to install the app? (default: ~/{project_name}): ")
+    while True:
+        try:
+            os.makedirs(os.path.join(path), exist_ok=True) if path != "" else None
+            break
+        except:
+            print("Invalid path. Please enter a valid path.")
+            path = input(f"Where do you want to install the app? (default: ~/{project_name}): ")
+    # while(not os.path.exists('/'.join(path.split('/')[:-1])) and path != ""):
+    #     print("Invalid path. Please enter a valid path.")
+    #     path = input(f"Where do you want to install the app? (default: ~/{project_name}): ")
 
     if path == "":
         path = os.path.join(os.path.expanduser("~"), project_name)
 
-    if os.path.exists(path):
+    if os.path.exists(os.path.join(path, project_name)):
+        print(path)
         ans = input("Folder already exists. Do you want to overwrite? (y/n): ")
         while ans not in ["y", "n"]:
             ans = input("Folder already exists. Do you want to overwrite? (y/n): ")
@@ -189,6 +197,7 @@ def onMain():
             os.system(f"sudo rm -r {path}")
             #shutil.rmtree(path, onerror=remove_readonly)
             print("Deleted folder Successfully.")
+            os.mkdir(os.path.join(path, project_name))
             change_branch(ask_for_branch(path), path)
     else:
         change_branch(ask_for_branch(path), path)
