@@ -17,7 +17,7 @@ from libs.handlers.keyboard.KeyHandler import KeyHandler
 from libs.standalones.PersistentData import PersistentData
 from libs.standalones.Files_Manager import Files_Manager
 
-__appname__ = "labelImg"
+_appname = "labelImg"
         
 class MainWindow(QMainWindow):
     __instance = None
@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
 
         MouseManager()
 
-        self.setWindowTitle(__appname__)
+        self.setWindowTitle(_appname)
         # Menu bar
         self.setMenuBar(MenuBar(self))
 
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     profiler = Profile()
     profiler.enable()
     app = QApplication(argv)
-    app.setApplicationName = __appname__
+    app.setApplicationName = _appname
 
     win = MainWindow()
     exitcode = app.exec()
