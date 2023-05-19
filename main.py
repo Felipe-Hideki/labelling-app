@@ -41,7 +41,7 @@ class MainWindow(QMainWindow):
         # Standalones
         self.keyHandler = KeyHandler(self)
         self.__settings = PersistentData()
-        self.files_manager = Files_Manager(self)
+        self.files_manager = Files_Manager(self, _appname)
 
         # Main widget
         self.mainWidget = MainWindowManager(parent=self)

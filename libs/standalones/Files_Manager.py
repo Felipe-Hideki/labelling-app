@@ -18,13 +18,14 @@ class Files_Manager(QObject):
     def instance(cls):
         return Files_Manager.__instance
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, _appname="labelImg"):
         assert Files_Manager.__instance is None, "Files_Manager is a singleton class, use Files_Manager.instance() instead"
         super().__init__(parent=parent)
         self.__images = []
         self.__cur_img = -1
         self.__folder_size = 0
         self.window = parent
+        self._appname = _appname
 
         MenuBar.instance().actions_dict[actions.file][fileMenu.open].triggered.connect(self.open_folder)
 
@@ -39,7 +40,7 @@ class Files_Manager(QObject):
     def __load(self, index: int):
         self.__cur_img = index
         self.OnLoadImage.emit(self.__images[index])
-        self.window.setWindowTitle(f"{self.__images[index]} - {self.window._appname}")
+        self.window.setWindowTitle(f"{self._appname} - {self.__cur_img+1} / {self.__folder_size}")
 
     def open_folder(self, path):
         path = QFileDialog.getExistingDirectory(None, "Select Workfolder", \
