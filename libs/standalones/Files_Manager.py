@@ -39,6 +39,7 @@ class Files_Manager(QObject):
     def __load(self, index: int):
         self.__cur_img = index
         self.OnLoadImage.emit(self.__images[index])
+        self.window.setWindowTitle(f"{self.__images[index]} - {self.window.__appname__}")
 
     def open_folder(self, path):
         path = QFileDialog.getExistingDirectory(None, "Select Workfolder", \
