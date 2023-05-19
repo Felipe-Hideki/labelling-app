@@ -193,7 +193,8 @@ def onMain():
             #shutil.rmtree(path, onerror=remove_readonly)
             print("Deleted folder Successfully.")
             os.mkdir(os.path.join(path, project_name))
-            change_branch(ask_for_branch(os.path.join(path, project_name)), path)
+            p_project = os.path.join(path, project_name)
+            change_branch(ask_for_branch(p_project), p_project)
     else:
         os.makedirs(os.path.join(path, project_name), exist_ok=True)
         change_branch(ask_for_branch(path), path)
