@@ -48,7 +48,7 @@ class KeyHandler:
     def __init__(self, mainWindow: QMainWindow) -> None: ...
 
     def __load(self, mainWindow: QMainWindow) -> None:
-        self.__changed_key = ""
+        self.__pressed_keys = ""
         self.__mainWindow = mainWindow
         self.lost_focus = False
         self.global_thread = QThreadPool.globalInstance()
@@ -81,6 +81,29 @@ class KeyHandler:
 
         keyboard.hook(self.__hook)
 
+    def get_canonical_name(self, keys: list[str]) -> str:
+        return keyboard.get_hotkey_name(keys)
+
+    def __add_key_press(self, key: str) -> None:
+        if key not in self.__pressed_keys:
+            self.__pressed_keys += f"+{keyboard._canonical_names.normalize_name(key)}"
+        if self.__pressed_keys[0] == "+":
+            self.__pressed_keys = ''.join(self.__pressed_keys[1:])
+
+    def __rem_key_press(self, key: str) -> None:
+        self.__pressed_keys = self.__pressed_keys.replace(f"{key}", "")
+        if len(self.__pressed_keys) == 0:
+            return
+        if self.__pressed_keys[0] == "+":
+            self.__pressed_keys = ''.join(self.__pressed_keys[1:])
+        if self.__pressed_keys[-1] == "+":
+            self.__pressed_keys = ''.join(self.__pressed_keys[:-1])
+
+    def __get_key_press(self) -> list[str]:
+        if self.__pressed_keys == "":
+            return []
+        return keyboard.get_hotkey_name(self.__pressed_keys.split('+')).split('+')
+    
     # TODO: Change name of this function
     def __broadcast(self, runnable: QRunnable) -> None:
         self.global_thread.start(runnable)
@@ -98,13 +121,8 @@ class KeyHandler:
         if not self.__mainWindow.isActiveWindow():
             return
         
-        print(f"mod: {event.modifiers}")
-        
-        keys_pressed = ""
-        if event.modifiers is not None:
-            for mod in event.modifiers:
-                keys_pressed += f'{mod}+'
-        keys_pressed += event.name
+        self.__add_key_press(event.name)
+        keys_pressed = self.__get_key_press()
 
         for bind_details in self.__binds.values():
             if bind_details.state_type == KeyStates.KEY_CHANGE and not bind_details.state \
@@ -119,28 +137,22 @@ class KeyHandler:
                 bind_details.state = True
 
     def __on_key_up(self, event: keyboard.KeyboardEvent) -> None:
-        keys_pressed = ""
+        keys_that_was_pressed = self.__get_key_press()
+        self.__rem_key_press(event.name)
         removed = event.name
-
-        for mod in event.modifiers:
-            keys_pressed += f'{mod}+'
-        if not keyboard.is_modifier(removed):
-            keys_pressed += removed
-        else:
-            keys_pressed = keys_pressed.removesuffix("+")
 
         for bind_details in self.__binds.values():
             if bind_details.state_type == KeyStates.KEY_CHANGE and bind_details.state \
-                    and (bind_details.key == keys_pressed or removed in bind_details.key):
+                    and (bind_details.key == keys_that_was_pressed and removed in bind_details.key):
                 self.__broadcast(bind_details.runnable)
                 bind_details.state = False
                 continue
 
             if (bind_details.state_type == KeyStates.KEY_UP or (bind_details.toggle and bind_details.state)) \
-                    and (bind_details.key == keys_pressed or removed in bind_details.key):
+                    and (bind_details.key == keys_that_was_pressed and removed in bind_details.key):
                 self.__broadcast(bind_details.runnable)
                 bind_details.state = False
-            if bind_details.state and self.__changed_key in bind_details.key:
+            if bind_details.state and removed in bind_details.key:
                 bind_details.state = False
 
     def bind_to(self, action: str, func: any) -> None:
