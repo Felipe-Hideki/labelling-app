@@ -68,6 +68,7 @@ def reset_stream(stream: io.TextIOWrapper):
 
 def remove_readonly(func, path, excinfo):
     os.chmod(path, stat.S_IWRITE)
+    print(f"Removed readonly from {path}")
     func(path)
 
 def get_lines(file: io.TextIOWrapper, prefix: str) -> list[str]:
@@ -168,7 +169,7 @@ def onMain():
 
     # Get path to install
     path = input(f"Where do you want to install the app? (default: ~/{project_name}): ")
-    while(not os.path.exists(path) and path != ""):
+    while(not os.path.exists('/'.join(path.split('/')[:-1])) and path != ""):
         print("Invalid path. Please enter a valid path.")
         path = input(f"Where do you want to install the app? (default: ~/{project_name}): ")
 
@@ -185,7 +186,8 @@ def onMain():
             print("Invalid input. Please enter 'y' or 'n'.")
   
         if ans == "y":
-            shutil.rmtree(path, onerror=remove_readonly)
+            os.system(f"sudo rm -r {path}")
+            #shutil.rmtree(path, onerror=remove_readonly)
             print("Deleted folder Successfully.")
             change_branch(ask_for_branch(path), path)
     else:
