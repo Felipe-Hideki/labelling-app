@@ -263,10 +263,10 @@ def onMain():
     print("\nInstalling dependencies... \n")
     # Install dependencies
 
-    with open(os.path.join(path, 'requirements.txt'), 'w') as f:
+    with open(os.path.join(path, project_name, 'requirements.txt'), 'w') as f:
         [f.write(line+'\n') for line in requirements]
 
-    with open(os.path.join(path, 'environment.path'), 'w') as f:
+    with open(os.path.join(path, project_name, 'environment.path'), 'w') as f:
         f.write(env_path)
     #send("source ~/anaconda3/etc/profile.d/conda.sh")
     if platform.system() == "Windows":
@@ -274,7 +274,7 @@ def onMain():
         && {pip_path} install -r {os.path.join(path, 'requirements.txt')} && conda deactivate \
         && echo 'Installation complete. You can now run the app by typing 'labelapp' in your terminal with the conda enviroment active.'")
     else:
-        send(f"{pip_path} install gitPython && {pip_path} install -e {path} \
+        send(f"{pip_path} install gitPython && {pip_path} install -e {os.path.join(path, project_name)} \
             && {pip_path} install -r {os.path.join(path, 'requirements.txt')} && conda deactivate \
             && echo 'Installation complete. You can now run the app by typing 'sudo labelapp' in your terminal with the conda enviroment active.'")
 
